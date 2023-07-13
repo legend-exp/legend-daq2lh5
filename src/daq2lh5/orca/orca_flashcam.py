@@ -19,15 +19,15 @@ def get_key(fcid, board_id, fc_input: int) -> int:
 
 
 def get_fcid(key: int) -> int:
-    return int(np.floor(key / 1000000))
+    return int(key // 1000000)
 
 
 def get_board_id(key: int) -> int:
-    return int(np.floor(key / 100)) & 0xFFF
+    return int((key // 100) % 10000)
 
 
 def get_fc_input(key: int) -> int:
-    return int(key & 0xFF)
+    return int(key % 100)
 
 
 class ORFlashCamListenerConfigDecoder(OrcaDecoder):
