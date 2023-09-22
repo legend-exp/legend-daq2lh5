@@ -111,7 +111,7 @@ class FCEventDecoder(DataDecoder):
         self.decoded_values["tracelist"]["length_guess"] = self.fc_config["nadcs"].value
 
     def get_key_lists(self) -> range:
-        return [range(self.fc_config["nadcs"].value)]
+        return [list(range(self.fc_config["nadcs"].value))]
 
     def get_decoded_values(self, channel: int = None) -> dict[str, dict[str, Any]]:
         # FC uses the same values for all channels
