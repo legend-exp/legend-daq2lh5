@@ -24,7 +24,7 @@ def test_default_rb_lib(lgnd_test_data):
     assert rb_lib["FCConfigDecoder"][0].out_name == "FCConfig"
     assert rb_lib["FCStatusDecoder"][0].out_name == "FCStatus"
     assert rb_lib["FCEventDecoder"][0].out_name == "FCEvent"
-    assert rb_lib["FCEventDecoder"][0].key_list == range(0, 6)
+    assert rb_lib["FCEventDecoder"][0].key_list == list(range(0, 6))
 
 
 def test_open_stream(lgnd_test_data):
