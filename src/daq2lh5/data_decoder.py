@@ -7,6 +7,7 @@ import lgdo
 import numpy as np
 from lgdo import LGDO
 from lgdo.lh5 import LH5Store
+from lgdo.lh5 import datatype as dtypeutils
 
 
 class DataDecoder:
@@ -205,10 +206,10 @@ class DataDecoder:
                 continue
 
             # Parse datatype for remaining lgdos
-            datatype, shape, elements = lgdo.lh5.utils.parse_datatype(datatype)
+            lgdotype = dtypeutils.datatype(datatype)
 
             # ArrayOfEqualSizedArrays
-            if datatype == "array_of_equalsized_arrays":
+            if lgdotype is lgdo.ArrayOfEqualSizedArrays:
                 length = attrs.pop("length")
                 # only arrays of 1D arrays are supported at present
                 dims = (1, 1)
@@ -219,7 +220,7 @@ class DataDecoder:
                 continue
 
             # VectorOfVectors
-            if elements.startswith("array"):
+            if lgdotype is lgdo.VectorOfVectors:
                 length_guess = size
                 if "length_guess" in attrs:
                     length_guess = attrs.pop("length_guess")
@@ -233,7 +234,7 @@ class DataDecoder:
             raise RuntimeError(
                 type(self).__name__,
                 ": do not know how to make a",
-                datatype,
+                lgdotype.__name__,
                 "for",
                 field,
             )
