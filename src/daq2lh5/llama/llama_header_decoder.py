@@ -60,6 +60,23 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
 
         print(self.channel_configs[0][0]["MAW3_offset"])
 
+        # assemble LGDO struct:
+        self.config.add_field("version_major", self.version_major)
+        self.config.add_field("version_minor", self.version_minor)
+        self.config.add_field("version_patch", self.version_patch)
+        self.config.add_field("length_econf", self.length_econf)
+        self.config.add_field("number_chOpen", self.number_chOpen)
+        
+        for fadcid, fadc in self.channel_configs.items():
+            fadc_lgdo = lgdo.Struct()
+            for chid, ch in fadc.items():
+                ch_lgdo = lgdo.Struct()
+                for key, value in ch.items():
+                    ch_lgdo.add_field(key, value)
+                fadc_lgdo.add_field("ch_{:02d}".format(chid), ch_lgdo)
+            self.config.add_field("fadc_{:02d}".format(fadcid), fadc_lgdo)
+
+
         return self.config, n_bytes_read
     
     #override from DataDecoder
