@@ -61,6 +61,20 @@ class LLAMAStreamer(DataStreamer):
         if rb_lib is None:
             rb_lib = self.rb_lib
 
+        #print(rb_lib)
+
+        if "LLAMAHeaderDecoder" in rb_lib:
+            config_rb_list = rb_lib["LLAMAHeaderDecoder"]
+            if len(config_rb_list) != 1:
+                log.warning(
+                    f"config_rb_list had length {len(config_rb_list)}, ignoring all but the first"
+                )
+            rb = config_rb_list[0]
+        else:
+            rb = RawBuffer(lgdo=header)
+        rb.loc = 1  # we have filled this buffer
+        return [rb]
+
         
 
 
