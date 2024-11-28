@@ -61,7 +61,7 @@ class LLAMAStreamer(DataStreamer):
         if rb_lib is None:
             rb_lib = self.rb_lib
 
-        #print(rb_lib)
+        print(header)
 
         if "LLAMAHeaderDecoder" in rb_lib:
             config_rb_list = rb_lib["LLAMAHeaderDecoder"]

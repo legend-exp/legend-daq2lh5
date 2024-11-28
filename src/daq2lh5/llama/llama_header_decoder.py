@@ -8,6 +8,7 @@ from typing import Dict, Any
 import lgdo
 
 from ..data_decoder import DataDecoder
+from .llama_base import join_fadcid_chid
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
 
         n_bytes_read += self.__decode_channelConfigs(f_in)
 
-        print(self.channel_configs[0][0]["MAW3_offset"])
+        print(self.channel_configs[0]["MAW3_offset"])
 
         # assemble LGDO struct:
         self.config.add_field("version_major", lgdo.Scalar(self.version_major))
@@ -67,14 +68,11 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
         self.config.add_field("length_econf", lgdo.Scalar(self.length_econf))
         self.config.add_field("number_chOpen", lgdo.Scalar(self.number_chOpen))
         
-        for fadcid, fadc in self.channel_configs.items():
-            fadc_lgdo = lgdo.Struct()
-            for chid, ch in fadc.items():
-                ch_lgdo = lgdo.Struct()
-                for key, value in ch.items():
-                    ch_lgdo.add_field(key, lgdo.Scalar(value))
-                fadc_lgdo.add_field("ch_{:02d}".format(chid), ch_lgdo)
-            self.config.add_field("fadc_{:02d}".format(fadcid), fadc_lgdo)
+        for fch_id, fch_content in self.channel_configs.items():
+            fch_lgdo = lgdo.Struct()
+            for key, value in fch_content.items():
+                fch_lgdo.add_field(key, lgdo.Scalar(value))
+            self.config.add_field("fch_{:02d}".format(fch_id), fch_lgdo)
 
 
         return self.config, n_bytes_read
@@ -89,15 +87,8 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
         Reads the metadata from the beginning of the file (the "channel configuration" part, directly after the file header).
         Creates a dictionary of the metadata for each FADC/channel combination, which is returned
         
-        structure of channelConfigs:
-        FADCindex      channelIndex
-        A ------------- x ----------- metadata for FADC A channel x
-                      | y ----------- metadata for FADC A channel y
-                      | z ----------- metadata for FADC A channel z
-                      
-        B ------------- k ----------- metadata for FADC B channel k
-                      | l ----------- metadata for FADC B channel l
-        ...
+        FADC-ID and channel-ID are combined into a single id for flattening:
+            (fadcid << 4) + chid
                       
         returns number of bytes read
         """
@@ -120,39 +111,33 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
             
             fadcIndex = evt_data_32[0]
             channelIndex = evt_data_32[1]
+            fch_id = join_fadcid_chid(fadcIndex, channelIndex)
             
-            if fadcIndex in self.channel_configs:
-                #print("pre-existing fadc")
-                pass
-            else:
-                #print("new fadc #{}".format(fadcIndex))
-                self.channel_configs[fadcIndex] = {}
-    
-            if channelIndex in self.channel_configs[fadcIndex]:
+            if fch_id in self.channel_configs:
                 raise RuntimeError("duplicate channel configuration in file: FADCID: {}, ChannelID: {}".format(fadcIndex, channelIndex))
             else:
-                self.channel_configs[fadcIndex][channelIndex] = {}
+                self.channel_configs[fch_id] = {}
                 
-            self.channel_configs[fadcIndex][channelIndex]["14BitFlag"] = evt_data_32[2] & 0x00000001
+            self.channel_configs[fch_id]["14BitFlag"] = evt_data_32[2] & 0x00000001
             if evt_data_32[2] & 0x00000002 == 0:
                 print("WARNING: Channel in configuration marked as non-open!")
-            self.channel_configs[fadcIndex][channelIndex]["ADC_offset"] = evt_data_32[3]
-            self.channel_configs[fadcIndex][channelIndex]["sample_freq"] = evt_data_dpf[0]     #64 bit float
-            self.channel_configs[fadcIndex][channelIndex]["gain"] = evt_data_dpf[1]
-            self.channel_configs[fadcIndex][channelIndex]["format_bits"] = evt_data_32[8]
-            self.channel_configs[fadcIndex][channelIndex]["sample_start_index"] = evt_data_32[9]
-            self.channel_configs[fadcIndex][channelIndex]["sample_pretrigger"] = evt_data_32[10]
-            self.channel_configs[fadcIndex][channelIndex]["avg_sample_pretrigger"] = evt_data_32[11]
-            self.channel_configs[fadcIndex][channelIndex]["avg_mode"] = evt_data_32[12]
-            self.channel_configs[fadcIndex][channelIndex]["sample_length"] = evt_data_32[13]
-            self.channel_configs[fadcIndex][channelIndex]["avg_sample_length"] = evt_data_32[14]
-            self.channel_configs[fadcIndex][channelIndex]["MAW_buffer_length"] = evt_data_32[15]
-            self.channel_configs[fadcIndex][channelIndex]["event_length"] = evt_data_32[16]
-            self.channel_configs[fadcIndex][channelIndex]["event_header_length"] = evt_data_32[17]
-            self.channel_configs[fadcIndex][channelIndex]["accum6_offset"] = evt_data_32[18]
-            self.channel_configs[fadcIndex][channelIndex]["accum2_offset"] = evt_data_32[19]
-            self.channel_configs[fadcIndex][channelIndex]["MAW3_offset"] = evt_data_32[20]
-            self.channel_configs[fadcIndex][channelIndex]["energy_offset"] = evt_data_32[21]
+            self.channel_configs[fch_id]["ADC_offset"] = evt_data_32[3]
+            self.channel_configs[fch_id]["sample_freq"] = evt_data_dpf[0]     #64 bit float
+            self.channel_configs[fch_id]["gain"] = evt_data_dpf[1]
+            self.channel_configs[fch_id]["format_bits"] = evt_data_32[8]
+            self.channel_configs[fch_id]["sample_start_index"] = evt_data_32[9]
+            self.channel_configs[fch_id]["sample_pretrigger"] = evt_data_32[10]
+            self.channel_configs[fch_id]["avg_sample_pretrigger"] = evt_data_32[11]
+            self.channel_configs[fch_id]["avg_mode"] = evt_data_32[12]
+            self.channel_configs[fch_id]["sample_length"] = evt_data_32[13]
+            self.channel_configs[fch_id]["avg_sample_length"] = evt_data_32[14]
+            self.channel_configs[fch_id]["MAW_buffer_length"] = evt_data_32[15]
+            self.channel_configs[fch_id]["event_length"] = evt_data_32[16]
+            self.channel_configs[fch_id]["event_header_length"] = evt_data_32[17]
+            self.channel_configs[fch_id]["accum6_offset"] = evt_data_32[18]
+            self.channel_configs[fch_id]["accum2_offset"] = evt_data_32[19]
+            self.channel_configs[fch_id]["MAW3_offset"] = evt_data_32[20]
+            self.channel_configs[fch_id]["energy_offset"] = evt_data_32[21]
 
         return n_bytes_read
 
