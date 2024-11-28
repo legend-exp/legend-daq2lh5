@@ -12,6 +12,7 @@ from .llama_base import join_fadcid_chid
 
 log = logging.getLogger(__name__)
 
+LLAMA_Channel_Configs_t = Dict[int, Dict[str, Any]]
 
 class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
     """
@@ -59,7 +60,7 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
 
         n_bytes_read += self.__decode_channelConfigs(f_in)
 
-        print(self.channel_configs[0]["MAW3_offset"])
+        #print(self.channel_configs[0]["MAW3_offset"])
 
         # assemble LGDO struct:
         self.config.add_field("version_major", lgdo.Scalar(self.version_major))
@@ -81,6 +82,8 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
     def make_lgdo(self, key: int = None, size: int = None) -> lgdo.Struct:
         return self.config
     
+    def get_channel_configs(self) -> LLAMA_Channel_Configs_t:
+        return self.channel_configs
 
     def __decode_channelConfigs(self, f_in: io.BufferedReader) -> int:
         """
@@ -106,8 +109,8 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
             channel = f_in.read(self.length_econf)
             n_bytes_read += self.length_econf
             ch_dpf = channel[16:32]
-            evt_data_32 = np.fromstring(channel, dtype=np.uint32)
-            evt_data_dpf = np.fromstring(ch_dpf, dtype=np.float64)
+            evt_data_32 = np.frombuffer(channel, dtype=np.uint32)
+            evt_data_dpf = np.frombuffer(ch_dpf, dtype=np.float64)
             
             fadcIndex = evt_data_32[0]
             channelIndex = evt_data_32[1]
