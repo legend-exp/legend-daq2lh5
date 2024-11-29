@@ -40,12 +40,11 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
 
         #line0: magic bytes
         magic = evt_data_32[0]
-        print(hex(magic))
+        #print(hex(magic))
         if magic == self.magic_bytes():
-            if self.verbose > 0:
-                print ("Read in file as llamaDAQ-SIS3316, magic bytes correct.")
+            log.info("Read in file as llamaDAQ-SIS3316, magic bytes correct.")
         else:
-            print ("ERROR: Magic bytes not matching for llamaDAQ file!")
+            log.error("Magic bytes not matching for llamaDAQ file!")
             raise RuntimeError("wrong file type")
     
         self.version_major = evt_data_16[4]
@@ -54,9 +53,8 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
         self.length_econf = evt_data_16[5]
         self.number_chOpen = evt_data_32[3]
         
-        if self.verbose > 0:
-            print ("File version: {}.{}.{}".format(self.version_major, self.version_minor, self.version_patch))
-            print ("{} channels open, each config {} bytes long".format(self.number_chOpen, self.length_econf))
+        log.debug("File version: {}.{}.{}".format(self.version_major, self.version_minor, self.version_patch))
+        log.debug("{} channels open, each config {} bytes long".format(self.number_chOpen, self.length_econf))
 
         n_bytes_read += self.__decode_channelConfigs(f_in)
 
