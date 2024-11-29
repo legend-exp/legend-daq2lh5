@@ -11,6 +11,7 @@ ERROR = logging.ERROR
 FATAL = logging.FATAL
 CRITICAL = logging.CRITICAL
 
+root=logging.root
 
 def setup(level: int = logging.INFO, logger: logging.Logger = None) -> None:
     """Setup a colorful logging output.
