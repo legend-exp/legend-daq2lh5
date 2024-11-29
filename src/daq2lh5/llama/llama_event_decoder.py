@@ -99,7 +99,7 @@ class LLAMAEventDecoder(DataDecoder):
                     break
             else:
                 kll.append([fch_id])
-        log.debug("key lists is: {}".format(repr(kll)))
+        log.debug("key lists are: {}".format(repr(kll)))
         return kll
         
 
@@ -127,8 +127,6 @@ class LLAMAEventDecoder(DataDecoder):
         A single packet corresponds to a single event and channel, and has a unique timestamp.
         packets of different channel groups can vary in size!
         """
-
-        print("keys I got in decode_packet(): {}".format(evt_rbkd.keys()))
 
         # Check if this fch_id should be recorded.
         if fch_id not in evt_rbkd:
@@ -216,7 +214,6 @@ class LLAMAEventDecoder(DataDecoder):
         #store waveform if available:
         if raw_length_16 > 0:
             tbl["waveform"]["values"].nda[ii] = evt_data_16[offset * 2 : offset * 2 + raw_length_16]
-            log.debug("Stored {} raw samples".format(raw_length_16))
             offset += raw_length_32
         
         #store aux (avg) waveform if available:

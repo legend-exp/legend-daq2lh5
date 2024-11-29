@@ -81,7 +81,6 @@ class LLAMAStreamer(DataStreamer):
             if "LLAMAEventDecoder" in rb_lib
             else None
         )
-        #print(self.event_rbkd)
 
         if "LLAMAHeaderDecoder" in rb_lib:
             config_rb_list = rb_lib["LLAMAHeaderDecoder"]
@@ -119,7 +118,6 @@ class LLAMAStreamer(DataStreamer):
             return False        # EOF
         self.packet_id += 1
         self.n_bytes_read += len(packet)
-        print(f"Read another {len(packet)} bytes; now at {self.n_bytes_read}")
 
         self.any_full |= self.event_decoder.decode_packet(
             packet, self.event_rbkd, self.packet_id, fch_id
@@ -153,37 +151,5 @@ class LLAMAStreamer(DataStreamer):
 
         return packet, fch_id
     
-
-    ## unneeded, since apparently the base implementation already does this -> use get_key_lists() !
-    def build_default_rb_lib_XXX(self, out_stream: str, channel_configs: LLAMA_Channel_Configs_t) -> RawBufferLibrary:
-        """
-        Build a very basic :class:`~.RawBufferLibrary` that will work for this stream.
-        Similar to data_streamer.build_default_rb_lib()
-
-        Base method cannot be used, since we need different buffers for some different channels, since
-        data setup (length of traces, frequency of aux trace, ...) can change between channels.
-        """
-        rb_lib = RawBufferLibrary()
-        decoders = [self.event_decoder]
-        if len(decoders) == 0:
-            log.warning(
-                f"no decoders returned by get_decoder_list() for {type(self).__name__}"
-            )
-            return rb_lib
-
-
-
-    ## OLD, now unused try of that hack :)
-    def __hack_rb_lib(self, channel_configs):
-        rb_json = {
-            "LLAMAEventDecoder" : {
-                "events" : {
-                    "key_list" : [0,1,2],    #test
-                    "out_stream" : "test.lh5"
-                }
-            }
-        }
-        return RawBufferLibrary(rb_json)
-
 
 
