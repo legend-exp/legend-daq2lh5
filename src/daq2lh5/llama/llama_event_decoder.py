@@ -51,7 +51,7 @@ class LLAMAEventDecoder(DataDecoder):
         # One set of settings per fch, since settings can be different per channel group
         self.decoded_values: dict[int, dict[str, Any]] = {}
         super().__init__(*args, **kwargs)
-        self.skipped_channels = {}      # TODO
+        self.skipped_channels = {}
         self.channel_configs = None
 
     def set_channel_configs(self, channel_configs: LLAMA_Channel_Configs_t) -> None:
@@ -65,11 +65,11 @@ class LLAMAEventDecoder(DataDecoder):
             sample_clock_freq = config["sample_freq"]
             avg_mode = config["avg_mode"]
             dt_raw: int = int(1/sample_clock_freq*1000 + 0.5)
-            dt_aux: int = dt_raw * (1 << (avg_mode + 1))
+            dt_avg: int = dt_raw * (1 << (avg_mode + 1))
             if config["sample_length"] > 0:
                 self.__add_waveform(self.decoded_values[fch], False, config["sample_length"], dt_raw)
             if config["avg_sample_length"] > 0 and avg_mode > 0:
-                self.__add_waveform(self.decoded_values[fch], True, config["avg_sample_length"], dt_aux)
+                self.__add_waveform(self.decoded_values[fch], True, config["avg_sample_length"], dt_avg)
             if format_bits & 0x01:
                 self.__add_accum1till6(self.decoded_values[fch])
             if format_bits & 0x02:
@@ -216,9 +216,9 @@ class LLAMAEventDecoder(DataDecoder):
             tbl["waveform"]["values"].nda[ii] = evt_data_16[offset * 2 : offset * 2 + raw_length_16]
             offset += raw_length_32
         
-        #store aux (avg) waveform if available:
+        #store pre-averaged (avg) waveform if available:
         if avg_length_16 > 0:
-            tbl["auxwaveform"]["values"].nda[ii] = evt_data_16[offset * 2 : offset * 2 + avg_length_16]
+            tbl["avgwaveform"]["values"].nda[ii] = evt_data_16[offset * 2 : offset * 2 + avg_length_16]
             offset += avg_length_32
 
         if offset != len(evt_data_32):
@@ -229,11 +229,14 @@ class LLAMAEventDecoder(DataDecoder):
         return evt_rbkd[fch_id].is_full()
 
 
-    def __add_waveform(self, decoded_values_fch: dict[str, Any], is_aux: bool, max_samples: int, dt: int) -> None:
+    def __add_waveform(self, decoded_values_fch: dict[str, Any], is_avg: bool, max_samples: int, dt: int) -> None:
         """
-        Averaged samples are called "Aux waveform" due to historic (GERDA) reasons.
+        Averaged samples are available from the 125 MHz (16 bit) variatnt of the SIS3316 and can be stored independently of raw samples.
+        I use waveform for raw samples (dt from clock itself) and avgwaveform from averaged samples (dt from clock * avg number).
+
+        GERDA used to have the low-frequency (waveform) & the high-frequency (aux waveform); here: LF = avgwaveform & HF = waveform.
         """
-        name: str = "auxwaveform" if is_aux else "waveform"
+        name: str = "avgwaveform" if is_avg else "waveform"
         decoded_values_fch[name] = {
             "dtype": "uint16",
             "datatype": "waveform",
