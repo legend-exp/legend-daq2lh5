@@ -53,6 +53,9 @@ class LLAMAEventDecoder(DataDecoder):
         super().__init__(*args, **kwargs)
         self.skipped_channels = {}
         self.channel_configs = None
+        self.dt_raw: dict[int, int] = {} # need to buffer that to update t0 for avg waveforms per event
+        self.t0_raw: dict[int, float] = {} # store when receiving channel configs and use for each waveform
+        self.t0_avg_const: dict[int, float] = {} #constant part of the t0 of averaged waveforms
 
     def set_channel_configs(self, channel_configs: LLAMA_Channel_Configs_t) -> None:
         """Receive channel configurations from llama_streamer after header was parsed
@@ -66,6 +69,12 @@ class LLAMAEventDecoder(DataDecoder):
             avg_mode = config["avg_mode"]
             dt_raw: int = int(1/sample_clock_freq*1000 + 0.5)
             dt_avg: int = dt_raw * (1 << (avg_mode + 1))
+            # t0 generation functions from llamaDAQ -> EventConfig.hh
+            t0_raw: float = (float(config["sample_start_index"]) - float(config["sample_pretrigger"])) * float(dt_raw)  # location of the trigger is at t = 0
+            t0_avg: float = -float(config["sample_pretrigger"]) * float(dt_raw) - float(config["avg_sample_pretrigger"]) * float(dt_avg)  # additional offset to be added independently for every event
+            self.dt_raw[fch] = dt_raw
+            self.t0_raw[fch] = t0_raw
+            self.t0_avg_const[fch] = t0_avg
             if config["sample_length"] > 0:
                 self.__add_waveform(self.decoded_values[fch], False, config["sample_length"], dt_raw)
             if config["avg_sample_length"] > 0 and avg_mode > 0:
@@ -215,11 +224,14 @@ class LLAMAEventDecoder(DataDecoder):
         if raw_length_16 > 0:
             tbl["waveform"]["values"].nda[ii] = evt_data_16[offset * 2 : offset * 2 + raw_length_16]
             offset += raw_length_32
+            tbl["waveform"]["t0"].nda[ii] = self.t0_raw[fch_id]
         
         #store pre-averaged (avg) waveform if available:
         if avg_length_16 > 0:
             tbl["avgwaveform"]["values"].nda[ii] = evt_data_16[offset * 2 : offset * 2 + avg_length_16]
             offset += avg_length_32
+            # need to update avg waveform t0 based on the offset I get per event
+            tbl["avgwaveform"]["t0"].nda[ii] = self.t0_avg_const[fch_id] + float(avg_count_status) * float(self.dt_raw[fch_id])
 
         if offset != len(evt_data_32):
             raise RuntimeError("I messed up...")     
@@ -241,7 +253,8 @@ class LLAMAEventDecoder(DataDecoder):
             "dtype": "uint16",
             "datatype": "waveform",
             "wf_len": max_samples,  # max value. override this before initializing buffers to save RAM
-            "dt": dt,  # override if a different clock rate is used
+            "dt": dt, # the sample pitch (inverse of clock speed)
+            #"t0": t0, # Adding t0 here does not work
             "dt_units": "ns",
             "t0_units": "ns",
         }
