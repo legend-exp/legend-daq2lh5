@@ -103,7 +103,7 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
         if self.length_econf != 88:
             raise RuntimeError("Invalid channel configuration format")
 
-        for i in range(0, self.number_chOpen):
+        for _i in range(0, self.number_chOpen):
             # print("reading in channel config {}".format(i))
 
             channel = f_in.read(self.length_econf)
