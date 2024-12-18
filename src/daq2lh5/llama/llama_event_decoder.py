@@ -19,7 +19,8 @@ llama_decoded_values_template = {
     #combined index of FADC and channel
     "fch_id": {"dtype": "uint32"},
     # time since epoch
-    "timestamp": {"dtype": "uint64", "units": "clock_ticks"}
+    "timestamp": {"dtype": "uint64", "units": "clock_ticks"},
+    "status_flag": {"dtype": "uint32"}
     # waveform data --> not always present
     #"waveform": {
     #    "dtype": "uint16",
@@ -30,12 +31,12 @@ llama_decoded_values_template = {
     #    "t0_units": "ns",
     #}
 }
-"""Default llamaDAQ SIS3316 Event decoded values.
-
-Warning
--------
-This configuration can be dynamically modified by the decoder at runtime.
-"""
+#"""Default llamaDAQ SIS3316 Event decoded values.
+#
+#Warning
+#-------
+#This configuration will be dynamically modified by the decoder at runtime.
+#"""
 
 def check_dict_spec_equal(d1: dict[str, Any], d2: dict[str, Any], specs: list[str]) -> bool:
     for spec in specs:
@@ -98,7 +99,8 @@ class LLAMAEventDecoder(DataDecoder):
             raise RuntimeError("Identification of key lists requires channel configs to be set!")
 
         params_for_equality = ["sample_length", "avg_sample_length", "avg_mode"]
-        check_equal = lambda c1, c2: check_dict_spec_equal(c1, c2, params_for_equality)
+        def check_equal(c1, c2):
+            return check_dict_spec_equal(c1, c2, params_for_equality)
         kll: list[list[int]] = []      #key-list-list
         for fch_id, config in self.channel_configs.items():
             for kl in kll:
@@ -187,7 +189,7 @@ class LLAMAEventDecoder(DataDecoder):
             offset += 2
 
         raw_length_32 = (evt_data_32[offset+0]) & 0x03ffffff
-        status_flag = ((evt_data_32[offset+0]) & 0x04000000) >> 26 #bit 26
+        tbl["status_flag"].nda[ii] = ((evt_data_32[offset+0]) & 0x04000000) >> 26 #bit 26
         maw_test_flag = ((evt_data_32[offset+0]) & 0x08000000) >> 27 #bit 27
         avg_data_coming = False
         if evt_data_32[offset+0] & 0xf0000000 == 0xe0000000:

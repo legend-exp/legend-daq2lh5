@@ -27,7 +27,6 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
         super().__init__(*args, **kwargs)
         self.config = lgdo.Struct()
         self.channel_configs = None
-        self.verbose = True ### debug
 
     def decode_header(self, f_in: io.BufferedReader) -> lgdo.Struct:
         n_bytes_read = 0
@@ -56,7 +55,7 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
         log.debug("File version: {}.{}.{}".format(self.version_major, self.version_minor, self.version_patch))
         log.debug("{} channels open, each config {} bytes long".format(self.number_chOpen, self.length_econf))
 
-        n_bytes_read += self.__decode_channelConfigs(f_in)
+        n_bytes_read += self.__decode_channel_configs(f_in)
 
         #print(self.channel_configs[0]["MAW3_offset"])
 
@@ -83,7 +82,7 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
     def get_channel_configs(self) -> LLAMA_Channel_Configs_t:
         return self.channel_configs
 
-    def __decode_channelConfigs(self, f_in: io.BufferedReader) -> int:
+    def __decode_channel_configs(self, f_in: io.BufferedReader) -> int:
         """
         Reads the metadata from the beginning of the file (the "channel configuration" part, directly after the file header).
         Creates a dictionary of the metadata for each FADC/channel combination, which is returned
@@ -101,8 +100,7 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
             raise RuntimeError("Invalid channel configuration format")
 
         for i in range(0, self.number_chOpen):
-            if self.verbose > 1:
-                print("reading in channel config {}".format(i))
+            #print("reading in channel config {}".format(i))
                 
             channel = f_in.read(self.length_econf)
             n_bytes_read += self.length_econf
@@ -110,18 +108,18 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
             evt_data_32 = np.frombuffer(channel, dtype=np.uint32)
             evt_data_dpf = np.frombuffer(ch_dpf, dtype=np.float64)
             
-            fadcIndex = evt_data_32[0]
-            channelIndex = evt_data_32[1]
-            fch_id = join_fadcid_chid(fadcIndex, channelIndex)
+            fadc_index = evt_data_32[0]
+            channel_index = evt_data_32[1]
+            fch_id = join_fadcid_chid(fadc_index, channel_index)
             
             if fch_id in self.channel_configs:
-                raise RuntimeError("duplicate channel configuration in file: FADCID: {}, ChannelID: {}".format(fadcIndex, channelIndex))
+                raise RuntimeError("duplicate channel configuration in file: FADCID: {}, ChannelID: {}".format(fadc_index, channel_index))
             else:
                 self.channel_configs[fch_id] = {}
                 
             self.channel_configs[fch_id]["14BitFlag"] = evt_data_32[2] & 0x00000001
             if evt_data_32[2] & 0x00000002 == 0:
-                print("WARNING: Channel in configuration marked as non-open!")
+                log.warning("Channel in configuration marked as non-open!")
             self.channel_configs[fch_id]["ADC_offset"] = evt_data_32[3]
             self.channel_configs[fch_id]["sample_freq"] = evt_data_dpf[0]     #64 bit float
             self.channel_configs[fch_id]["gain"] = evt_data_dpf[1]
