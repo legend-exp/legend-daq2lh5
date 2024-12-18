@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import logging
-from typing import Tuple
+
 import numpy as np
 
 from ..data_decoder import DataDecoder
 from ..data_streamer import DataStreamer
 from ..raw_buffer import RawBuffer, RawBufferLibrary
-
-from .llama_header_decoder import LLAMAHeaderDecoder, LLAMA_Channel_Configs_t
 from .llama_event_decoder import LLAMAEventDecoder
+from .llama_header_decoder import LLAMAHeaderDecoder
 
 log = logging.getLogger(__name__)
+
 
 class LLAMAStreamer(DataStreamer):
     """
@@ -30,7 +30,7 @@ class LLAMAStreamer(DataStreamer):
         dec_list.append(self.header_decoder)
         dec_list.append(self.event_decoder)
         return dec_list
-    
+
     def open_stream(
         self,
         llama_filename: str,
@@ -56,12 +56,14 @@ class LLAMAStreamer(DataStreamer):
         header, n_bytes_hdr = self.header_decoder.decode_header(self.in_stream)
         self.n_bytes_read += n_bytes_hdr
 
-        self.event_decoder.set_channel_configs(self.header_decoder.get_channel_configs())
+        self.event_decoder.set_channel_configs(
+            self.header_decoder.get_channel_configs()
+        )
 
         # as far as I can tell, this happens if a user does not specify output.
         # Then I can still get a rb_lib, but that misses keys entirely, which I need since channels can have different setups.
         # So I try to hack my own here in case there is none provided.
-        #if rb_lib is None:
+        # if rb_lib is None:
         #    rb_lib = self.__hack_rb_lib(self.header_decoder.get_channel_configs())
 
         # initialize the buffers in rb_lib. Store them for fast lookup
@@ -94,10 +96,6 @@ class LLAMAStreamer(DataStreamer):
         rb.loc = 1  # we have filled this buffer
         return [rb]
 
-        
-
-
-
     def close_stream(self) -> None:
         if self.in_stream is None:
             raise RuntimeError("tried to close an unopened stream")
@@ -115,7 +113,7 @@ class LLAMAStreamer(DataStreamer):
 
         packet, fch_id = self.__read_bytes()
         if packet is None:
-            return False        # EOF
+            return False  # EOF
         self.packet_id += 1
         self.n_bytes_read += len(packet)
 
@@ -124,8 +122,8 @@ class LLAMAStreamer(DataStreamer):
         )
 
         return True
-    
-    def __read_bytes(self) -> Tuple[bytes | None, int]:
+
+    def __read_bytes(self) -> tuple[bytes | None, int]:
         """
         return bytes if read successful or None if EOF.
         int is the fch_id (needs to be fetched to obtain the size of the event)
@@ -133,23 +131,26 @@ class LLAMAStreamer(DataStreamer):
         if self.in_stream is None:
             raise RuntimeError("No stream open!")
 
-        position = self.in_stream.tell()     #save position of the event header's 1st byte
-        data1 = self.in_stream.read(4)       #read the first (32 bit) word of the event's header: channelID & format bits
+        position = self.in_stream.tell()  # save position of the event header's 1st byte
+        data1 = self.in_stream.read(
+            4
+        )  # read the first (32 bit) word of the event's header: channelID & format bits
         if len(data1) < 4:
-            return None, -1         # EOF, I guess
-        self.in_stream.seek(position)        #go back to 1st position of event header
+            return None, -1  # EOF, I guess
+        self.in_stream.seek(position)  # go back to 1st position of event header
 
         header_data_32 = np.fromstring(data1, dtype=np.uint32)
-        fch_id = (header_data_32[0] >> 4) & 0x00000fff
+        fch_id = (header_data_32[0] >> 4) & 0x00000FFF
 
-        event_length_32 = self.header_decoder.get_channel_configs()[fch_id]["event_length"]
+        event_length_32 = self.header_decoder.get_channel_configs()[fch_id][
+            "event_length"
+        ]
         event_length_8 = event_length_32 * 4
 
         packet = self.in_stream.read(event_length_8)
         if len(packet) < event_length_8:
-            raise RuntimeError(f"Tried to read {event_length_8} bytes but got {len(packet)}")
+            raise RuntimeError(
+                f"Tried to read {event_length_8} bytes but got {len(packet)}"
+            )
 
         return packet, fch_id
-    
-
-
