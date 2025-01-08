@@ -350,7 +350,7 @@ class DataStreamer(ABC):
                     if len(key_list) == 1:
                         this_name = f"{dec_key}_{key_list[0]}"
                     else:
-                        this_name = f"{dec_key}_{ii}"
+                        this_name = f"{dec_key}_{ii}"  # this can cause a name clash e.g. for [[1],[2,3]] ...
                 rb = RawBuffer(
                     key_list=key_list, out_stream=out_stream, out_name=this_name
                 )

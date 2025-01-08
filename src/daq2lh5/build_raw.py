@@ -12,6 +12,7 @@ from tqdm.auto import tqdm
 
 from .compass.compass_streamer import CompassStreamer
 from .fc.fc_streamer import FCStreamer
+from .llama.llama_streamer import LLAMAStreamer
 from .orca.orca_streamer import OrcaStreamer
 from .raw_buffer import RawBufferLibrary, write_to_lh5_and_clear
 
@@ -180,7 +181,7 @@ def build_raw(
     elif in_stream_type == "Compass":
         streamer = CompassStreamer(compass_config_file)
     elif in_stream_type == "LlamaDaq":
-        raise NotImplementedError("LlamaDaq streaming not yet implemented")
+        streamer = LLAMAStreamer()
     elif in_stream_type == "MGDO":
         raise NotImplementedError("MGDO streaming not yet implemented")
     else:
