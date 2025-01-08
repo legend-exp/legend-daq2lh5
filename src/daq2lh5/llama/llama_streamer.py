@@ -139,7 +139,7 @@ class LLAMAStreamer(DataStreamer):
             return None, -1  # EOF, I guess
         self.in_stream.seek(position)  # go back to 1st position of event header
 
-        header_data_32 = np.fromstring(data1, dtype=np.uint32)
+        header_data_32 = np.frombuffer(data1, dtype=np.uint32)
         fch_id = (header_data_32[0] >> 4) & 0x00000FFF
 
         event_length_32 = self.header_decoder.get_channel_configs()[fch_id][

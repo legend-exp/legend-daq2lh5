@@ -35,8 +35,8 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
         f_in.seek(0)  # should be there anyhow, but re-set if not
         header = f_in.read(16)  # read 16 bytes
         n_bytes_read += 16
-        evt_data_32 = np.fromstring(header, dtype=np.uint32)
-        evt_data_16 = np.fromstring(header, dtype=np.uint16)
+        evt_data_32 = np.frombuffer(header, dtype=np.uint32)
+        evt_data_16 = np.frombuffer(header, dtype=np.uint16)
 
         # line0: magic bytes
         magic = evt_data_32[0]
