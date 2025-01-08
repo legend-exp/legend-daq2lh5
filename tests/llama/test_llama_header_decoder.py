@@ -1,6 +1,6 @@
-
 from daq2lh5.llama.llama_header_decoder import LLAMAHeaderDecoder
 from daq2lh5.llama.llama_streamer import LLAMAStreamer
+
 
 def test_read_header(test_data_path):
     streamer = LLAMAStreamer()

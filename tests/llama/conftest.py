@@ -1,4 +1,3 @@
-import fcutils
 import pytest
 
 
