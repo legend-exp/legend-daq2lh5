@@ -35,45 +35,42 @@ friend), decode all the data it can and save it to an LH5 file named
 .. tip::
    Check the |build_raw| documentation for a full list of useful options.
 
-When the *out_spec* argument is a dictionary or a string ending with ``.json``,
-it is interpreted as a configuration dictionary or a JSON file containing it,
-respectively. Technically, this dictionary configures a
+When the *out_spec* argument is a dictionary or a string ending with ``.json``
+or ``.yaml``, it is interpreted as a configuration dictionary or a file
+containing it, respectively. Technically, this dictionary configures a
 :class:`~.raw_buffer.RawBufferLibrary`.
 
 .. tip::
    The full configuration format specification is documented in depth in
-   :meth:`.raw_buffer.RawBufferLibrary.set_from_json_dict`.
+   :meth:`.raw_buffer.RawBufferLibrary.set_from_dict`.
 
 Let's use the following configuration file as an example:
 
-.. code-block::
-   :caption: ``raw-out-spec.json``
+.. code-block:: yaml
+   :caption: ``raw-out-spec.yaml``
    :linenos:
 
-    {
-      "ORFlashCamWaveformDecoder" : {
-        "group1-{key:07d}/raw" : {
-          "key_list" : [[1, 3], 9],
-          "out_stream" : "{filename}"
-        },
-        "group2-{key:07d}/raw" : {
-          "key_list" : [[11, 13]],
-          "out_stream" : "{filename}"
-        }
-      },
-      "OrcaHeaderDecoder" : {
-        "header-data" : {
-          "key_list" : ["*"],
-          "out_stream" : "{filename}"
-        }
-      },
-      "*" : {
-        "extra/{name}" : {
-          "key_list" : ["*"],
-          "out_stream" : "extra.lh5"
-        }
-      }
-    }
+    ORFlashCamWaveformDecoder:
+      "group1-{key:07d}/raw":
+        key_list:
+          - [1, 3]
+          - 9
+        out_stream: "{filename}"
+
+      "group2-{key:07d}/raw":
+        key_list:
+          - [11, 13]
+        out_stream: "{filename}"
+
+    OrcaHeaderDecoder:
+      header-data:
+        key_list: ["*"]
+        out_stream: "{filename}"
+
+    "*":
+      "extra/{name}":
+        key_list: ["*"]
+        out_stream: "extra.lh5"
 
 The first-level keys specify the names of the
 :class:`~.data_decoder.DataDecoder`-derived classes to be used in the
@@ -132,7 +129,7 @@ predefined variables are ``key`` and ``name``, but any other variable can be
 expanded by passing its value to |build_raw| as keyword argument. For example,
 for the the configuration shown above, ``filename`` must be defined like this: ::
 
-    build_raw("daq-data.orca", out_spec="raw-out-spec.json", filename="raw-data.lh5")
+    build_raw("daq-data.orca", out_spec="raw-out-spec.yaml", filename="raw-data.lh5")
 
 .. note::
    ``key`` and ``name`` can be overloaded by keyword arguments in |build_raw|.
@@ -192,29 +189,25 @@ Convert files and save them in the original directory with the same filenames
     $ # set maximum number of rows to be considered from each file
     $ legend-daq2lh5 --max-rows 100 data/*.orca
 
-Customize the group layout of the LH5 files in a JSON configuration file (see
+Customize the group layout of the LH5 files in a YAML configuration file (see
 above section):
 
-.. code-block:: json
+.. code-block:: yaml
 
-  {
-    "FCEventDecoder": {
-      "ch{key:0>3d}/raw": {
-        "key_list": [[0, 58]],
-          "out_stream": "{orig_basename}.lh5"
-        }
-      }
-    }
-  }
+  FCEventDecoder:
+    "ch{key:0>3d}/raw":
+      key_list:
+        - [0, 58]
+      out_stream: "{orig_basename}.lh5"
 
 and pass it to the command line:
 
 .. code-block:: console
 
-    $ legend-daq2lh5 --out-spec fcio-config.json data/*.fcio
+    $ legend-daq2lh5 --out-spec fcio-config.yaml data/*.fcio
 
 .. note::
-   A special keyword ``orig_basename`` is automatically replaced in the JSON
+   A special keyword ``orig_basename`` is automatically replaced in the YAML
    configuration by the original DAQ file name without extension. Such a
    feature is useful to users that want to customize the HDF5 group layout
    without having to worry about file naming. This keyword is only available

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import glob
-import json
 import logging
 import os
 import time
@@ -10,6 +9,7 @@ import numpy as np
 from lgdo import lh5
 from tqdm.auto import tqdm
 
+from . import utils
 from .compass.compass_streamer import CompassStreamer
 from .fc.fc_streamer import FCStreamer
 from .llama.llama_streamer import LLAMAStreamer
@@ -49,12 +49,14 @@ def build_raw(
         Specification for the output stream.
 
         - if None, uses ``{in_stream}.lh5`` as the output filename.
-        - if a str not ending in ``.json``, interpreted as the output filename.
-        - if a str ending in ``.json``, interpreted as a filename containing
-          json-shorthand for the output specification (see :mod:`.raw_buffer`).
-        - if a JSON dict, should be a dict loaded from the json shorthand
-          notation for RawBufferLibraries (see :mod:`.raw_buffer`), which is
-          then used to build a :class:`.RawBufferLibrary`.
+        - if a str not ending with a config file extension, interpreted as the
+          output filename.
+        - if a str ending with a config file extension, interpreted as a
+          filename containing shorthand for the output specification (see
+          :mod:`.raw_buffer`).
+        - if a dict, should be a dict loaded from the shorthand notation for
+          RawBufferLibraries (see :mod:`.raw_buffer`), which is then used to
+          build a :class:`.RawBufferLibrary`.
         - if a :class:`.RawBufferLibrary`, the mapping of data to output file /
           group is taken from that.
 
@@ -72,8 +74,8 @@ def build_raw(
 
         - if None, CompassDecoder will sacrifice the first packet to determine
           waveform length
-        - if a str ending in ``.json``, interpreted as a filename containing
-          json-shorthand for the output specification (see
+        - if a str ending with a config file extension, interpreted as a
+          filename containing shorthand for the output specification (see
           :mod:`.compass.compass_event_decoder`).
 
     hdf5_settings
@@ -120,11 +122,14 @@ def build_raw(
 
     # process out_spec and setup rb_lib if specified
     rb_lib = None
-    if isinstance(out_spec, str) and out_spec.endswith(".json"):
-        with open(out_spec) as json_file:
-            out_spec = json.load(json_file)
+    allowed_exts = [ext for exts in utils.__file_extensions__.values() for ext in exts]
+    if isinstance(out_spec, str) and any(
+        [out_spec.endswith(ext) for ext in allowed_exts]
+    ):
+        with open(out_spec) as f:
+            out_spec = utils.load_dict(f)
     if isinstance(out_spec, dict):
-        out_spec = RawBufferLibrary(json_dict=out_spec, kw_dict=kwargs)
+        out_spec = RawBufferLibrary(config=out_spec, kw_dict=kwargs)
     if isinstance(out_spec, RawBufferLibrary):
         rb_lib = out_spec
     # if no rb_lib, write all data to file
