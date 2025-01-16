@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import os
 
@@ -8,6 +7,7 @@ import h5py
 import lgdo
 from lgdo import lh5
 
+from .. import utils
 from ..buffer_processor.buffer_processor import buffer_processor
 from ..raw_buffer import RawBuffer, RawBufferLibrary
 
@@ -104,11 +104,13 @@ def lh5_buffer_processor(
     raw_store.gimme_file(proc_file_name, "a")
 
     # Do key expansion on the out_spec
-    if isinstance(out_spec, str) and out_spec.endswith(".json"):
-        with open(out_spec) as json_file:
-            out_spec = json.load(json_file)
+    allowed_exts = [ext for exts in utils.__file_extensions__.values() for ext in exts]
+    if isinstance(out_spec, str) and any(
+        [out_spec.endswith(ext) for ext in allowed_exts]
+    ):
+        out_spec = utils.load_dict(out_spec)
     if isinstance(out_spec, dict):
-        RawBufferLibrary(json_dict=out_spec)
+        RawBufferLibrary(config=out_spec)
 
     # Write everything in the raw file to the new file, check for proc_spec under either the group name, out_name, or the name
     for tb in lh5_tables:

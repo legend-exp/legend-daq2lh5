@@ -5,7 +5,7 @@ import daq2lh5.raw_buffer as prb
 
 def test_raw_buffer_list():
     rbl = prb.RawBufferList()
-    rbl.set_from_json_dict(
+    rbl.set_from_dict(
         {
             "g{key:0>3d}": {
                 "key_list": [[3, 6]],
@@ -20,7 +20,7 @@ def test_raw_buffer_list():
     assert rbl.get_list_of("key_list") == [[3], [4], [5], [6]]
 
     rbl.clear()
-    rbl.set_from_json_dict(
+    rbl.set_from_dict(
         {
             "spms": {
                 "key_list": [[3, 6]],
@@ -64,7 +64,7 @@ def test_raw_buffer_lib_json_load():
     }
     """
     json_dict = json.loads(rb_json)
-    rblib = prb.RawBufferLibrary(json_dict=json_dict, kw_dict={"file_key": "run0"})
+    rblib = prb.RawBufferLibrary(config=json_dict, kw_dict={"file_key": "run0"})
     rb_keyed = rblib["FCEventDecoder"].get_keyed_dict()
     name = rb_keyed[41].out_name
     assert name == "g041"

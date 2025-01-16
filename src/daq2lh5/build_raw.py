@@ -126,8 +126,7 @@ def build_raw(
     if isinstance(out_spec, str) and any(
         [out_spec.endswith(ext) for ext in allowed_exts]
     ):
-        with open(out_spec) as f:
-            out_spec = utils.load_dict(f)
+        out_spec = utils.load_dict(out_spec)
     if isinstance(out_spec, dict):
         out_spec = RawBufferLibrary(config=out_spec, kw_dict=kwargs)
     if isinstance(out_spec, RawBufferLibrary):
