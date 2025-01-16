@@ -19,48 +19,49 @@ output to a :class:`.RawBufferList`.
 :class:`.RawBufferLibrary`: a dictionary of :class:`RawBufferList`\ s, e.g. one
 for each :class:`~.data_decoder.DataDecoder`. Keyed by the decoder name.
 
-:class:`.RawBuffer` supports a JSON short-hand notation, see
-:meth:`.RawBufferLibrary.set_from_json_dict` for full specification.
+:class:`.RawBuffer` supports a config file short-hand notation, see
+:meth:`.RawBufferLibrary.set_from_dict` for full specification.
 
-Example JSON yielding a valid :class:`.RawBufferLibrary` is below. In the
-example, the user would call ``RawBufferLibrary.set_from_json_dict(json_dict,
-kw_dict)`` with ``kw_dict`` containing an entry for ``'file_key'``. The other
-keywords ``{key}`` and ``{name}`` are understood by and filled in during
-:meth:`.RawBufferLibrary.set_from_json_dict` unless overloaded in ``kw_dict``.
+Example YAML yielding a valid :class:`.RawBufferLibrary` is below (other
+formats like JSON are also supported). In the example, the user would call
+``RawBufferLibrary.set_from_dict(config, kw_dict)`` with ``kw_dict``
+containing an entry for ``'file_key'``. The other keywords ``{key}`` and
+``{name}`` are understood by and filled in during
+:meth:`.RawBufferLibrary.set_from_dict` unless overloaded in ``kw_dict``.
 Note the use of the wildcard ``*``: this will match all other decoder names /
 keys.
 
-.. code-block :: json
+.. code-block :: yaml
 
-    {
-      "FCEventDecoder" : {
-        "g{key:0>3d}" : {
-          "key_list" : [ [24,64] ],
-          "out_stream" : "$DATADIR/{file_key}_geds.lh5:/geds",
-          "proc_spec": {
-            "window": {"waveform", 10, 100, "windowed_waveform"}
-          }
-        },
-        "spms" : {
-          "key_list" : [ [6,23] ],
-          "out_stream" : "$DATADIR/{file_key}_spms.lh5:/spms"
-        },
-        "puls" : {
-          "key_list" : [ 0 ],
-          "out_stream" : "$DATADIR/{file_key}_auxs.lh5:/auxs"
-        },
-        "muvt" : {
-          "key_list" : [ 1, 5 ],
-          "out_stream" : "$DATADIR/{file_key}_auxs.lh5:/auxs"
-        }
-      },
-      "*" : {
-        "{name}" : {
-          "key_list" : [ "*" ],
-          "out_stream" : "$DATADIR/{file_key}_{name}.lh5"
-        }
-      }
-    }
+    FCEventDecoder:
+      "g{key:0>3d}":
+        key_list:
+          - [24, 64]
+        out_stream: "$DATADIR/{file_key}_geds.lh5:/geds"
+        proc_spec:
+          window:
+            - waveform
+            - 10
+            - 100
+            - windowed_waveform
+      spms:
+        key_list:
+          - [6, 23]
+        out_stream: "$DATADIR/{file_key}_spms.lh5:/spms"
+      puls:
+        key_list:
+          - 0
+        out_stream: "$DATADIR/{file_key}_auxs.lh5:/auxs"
+      muvt:
+        key_list:
+          - 1
+          - 5
+        out_stream: "$DATADIR/{file_key}_auxs.lh5:/auxs"
+
+    "*":
+      "{name}":
+        key_list: ["*"]
+        out_stream: "$DATADIR/{file_key}_{name}.lh5"
 """
 
 from __future__ import annotations
@@ -105,7 +106,7 @@ class RawBuffer:
         the name or identifier of the object in the output stream.
     proc_spec
         a dictionary containing the following:
-        - a DSP config file, passed as a dictionary, or as a path to a JSON file
+        - a DSP config file, passed as a dictionary, or as a path to a config file
         - an array containing: the name of an LGDO object stored in the :class:`.RawBuffer` to be sliced,
         the start and end indices of the slice, and the new name for the sliced object
         - a dictionary of fields to drop
@@ -185,29 +186,27 @@ class RawBufferList(list):
                     self.keyed_dict[key] = rb
         return self.keyed_dict
 
-    def set_from_json_dict(
-        self, json_dict: dict, kw_dict: dict[str, str] = None
-    ) -> None:
-        """Set up a :class:`.RawBufferList` from a dictionary written in JSON
-        shorthand. See :meth:`.RawBufferLibrary.set_from_json_dict` for details.
+    def set_from_dict(self, config: dict, kw_dict: dict[str, str] = None) -> None:
+        """Set up a :class:`.RawBufferList` from a dictionary. See
+        :meth:`.RawBufferLibrary.set_from_dict` for details.
 
         Notes
         -----
-        `json_dict` is changed by this function.
+        `config` is changed by this function.
         """
-        expand_rblist_json_dict(json_dict, {} if kw_dict is None else kw_dict)
-        for name in json_dict:
+        expand_rblist_dict(config, {} if kw_dict is None else kw_dict)
+        for name in config:
             rb = RawBuffer()
-            if "key_list" in json_dict[name]:
-                rb.key_list = json_dict[name]["key_list"]
-            if "out_stream" in json_dict[name]:
-                rb.out_stream = json_dict[name]["out_stream"]
-            if "proc_spec" in json_dict[name]:
-                rb.proc_spec = json_dict[name][
+            if "key_list" in config[name]:
+                rb.key_list = config[name]["key_list"]
+            if "out_stream" in config[name]:
+                rb.out_stream = config[name]["out_stream"]
+            if "proc_spec" in config[name]:
+                rb.proc_spec = config[name][
                     "proc_spec"
                 ]  # If you swap this with the next line, then key expansion doesn't work
-            if "out_name" in json_dict[name]:
-                rb.out_name = json_dict[name]["out_name"]
+            if "out_name" in config[name]:
+                rb.out_name = config[name]["out_name"]
             else:
                 rb.out_name = name
             self.append(rb)
@@ -250,15 +249,12 @@ class RawBufferLibrary(dict):
     write to them.
     """
 
-    def __init__(self, json_dict: dict = None, kw_dict: dict[str, str] = None) -> None:
-        if json_dict is not None:
-            self.set_from_json_dict(json_dict, kw_dict)
+    def __init__(self, config: dict = None, kw_dict: dict[str, str] = None) -> None:
+        if config is not None:
+            self.set_from_dict(config, kw_dict)
 
-    def set_from_json_dict(
-        self, json_dict: dict, kw_dict: dict[str, str] = None
-    ) -> None:
-        r"""Set up a :class:`.RawBufferLibrary` from a dictionary written in
-        JSON shorthand.
+    def set_from_dict(self, config: dict, kw_dict: dict[str, str] = None) -> None:
+        r"""Set up a :class:`.RawBufferLibrary` from a dictionary.
 
         Basic structure:
 
@@ -288,7 +284,7 @@ class RawBufferLibrary(dict):
           to the first and last integer keys in a contiguous range (e.g. of
           channels) that get stored to the same buffer. These simply get
           replaced with the explicit list of integers in the range. We use
-          lists not tuples for JSON compliance.
+          lists not tuples for config file format compliance.
         * The ``name`` can include ``{key:xxx}`` format specifiers, indicating
           that each key in ``key_list`` should be given its own buffer with the
           corresponding name.  The same specifier can appear in ``out_path`` to
@@ -307,18 +303,18 @@ class RawBufferLibrary(dict):
 
         Parameters
         ----------
-        json_dict
-            loaded from a JSON file written in the allowed shorthand.
-            `json_dict` is changed by this function.
+        config
+            loaded from a config file written in the allowed shorthand.
+            `config` is changed by this function.
         kw_dict
             dictionary of keyword-value pairs for substitutions into the
             ``out_stream`` and ``out_name`` fields.
         """
-        for list_name in json_dict:
+        for list_name in config:
             if list_name not in self:
                 self[list_name] = RawBufferList()
-            self[list_name].set_from_json_dict(
-                json_dict[list_name], {} if kw_dict is None else kw_dict
+            self[list_name].set_from_dict(
+                config[list_name], {} if kw_dict is None else kw_dict
             )
 
     def get_list_of(self, attribute: str, unique: bool = True) -> list:
@@ -352,26 +348,26 @@ class RawBufferLibrary(dict):
             rb_list.clear_full()
 
 
-def expand_rblist_json_dict(json_dict: dict, kw_dict: dict[str, str]) -> None:
-    """Expand shorthands in a JSON dictionary representing a
+def expand_rblist_dict(config: dict, kw_dict: dict[str, str]) -> None:
+    """Expand shorthands in a dictionary representing a
     :class:`.RawBufferList`.
 
-    See :meth:`.RawBufferLibrary.set_from_json_dict` for details.
+    See :meth:`.RawBufferLibrary.set_from_dict` for details.
 
     Notes
     -----
-    The input JSON dictionary is changed by this function.
+    The input dictionary is changed by this function.
     """
     # get the original list of groups because we are going to change the
-    # dict.keys() of json_dict inside the next list. Note: we have to convert
+    # dict.keys() of config inside the next list. Note: we have to convert
     # from dict_keys to list here otherwise the loop complains about changing
     # the dictionary during iteration
-    buffer_names = list(json_dict.keys())
+    buffer_names = list(config.keys())
     for name in buffer_names:
         if name == "":
             raise ValueError("buffer name can't be empty")
 
-        info = json_dict[name]  # changes to info will change json_dict[name]
+        info = config[name]  # changes to info will change config[name]
         # make sure we have a key list
         if "key_list" not in info:
             raise ValueError(f"'{name}' is missing key_list")
@@ -399,12 +395,12 @@ def expand_rblist_json_dict(json_dict: dict, kw_dict: dict[str, str]) -> None:
                 continue  # will be handled later, once the key_list is known
             for key in info["key_list"]:
                 expanded_name = name.format(key=key)
-                json_dict[expanded_name] = info.copy()
-                json_dict[expanded_name]["key_list"] = [key]
-            json_dict.pop(name)
+                config[expanded_name] = info.copy()
+                config[expanded_name]["key_list"] = [key]
+            config.pop(name)
 
     # now re-iterate and expand out_paths
-    for name, info in json_dict.items():
+    for name, info in config.items():
         if len(info["key_list"]) == 1 and not (
             isinstance(info["key_list"][0], str) and "*" in info["key_list"][0]
         ):
