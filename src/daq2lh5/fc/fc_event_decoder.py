@@ -4,79 +4,48 @@ import copy
 import logging
 from typing import Any
 
-import fcutils
+from fcio import FCIO, Tags, Limits
 import lgdo
 
 from ..data_decoder import DataDecoder
+from .fc_eventheader_decoder import fc_eventheader_decoded_values, get_key
 
 log = logging.getLogger(__name__)
 
-# put decoded values here where they can be used also by the orca decoder
-fc_decoded_values = {
-    # packet index in file
-    "packet_id": {"dtype": "uint32"},
-    # index of event
-    "eventnumber": {"dtype": "int32"},
-    # time since epoch
-    "timestamp": {"dtype": "float64", "units": "s"},
-    # time since beginning of file
-    "runtime": {"dtype": "float64", "units": "s"},
-    # number of triggered adc channels
-    "numtraces": {"dtype": "int32"},
-    # list of triggered adc channels
-    "tracelist": {
-        "dtype": "int16",
-        "datatype": "array<1>{array<1>{real}}",  # vector of vectors
-        "length_guess": 16,
-    },
-    # fpga baseline
-    "baseline": {"dtype": "uint16"},
-    # fpga energy
-    "daqenergy": {"dtype": "uint16"},
-    # right now, index of the trigger (trace)
-    "channel": {"dtype": "uint32"},
-    # PPS timestamp in sec
-    "ts_pps": {"dtype": "int32"},
-    # clock ticks
-    "ts_ticks": {"dtype": "int32"},
-    # max clock ticks
-    "ts_maxticks": {"dtype": "int32"},
-    # the offset in sec between the master and unix
-    "mu_offset_sec": {"dtype": "int32"},
-    # the offset in usec between master and unix
-    "mu_offset_usec": {"dtype": "int32"},
-    # the calculated sec which must be added to the master
-    "to_master_sec": {"dtype": "int32"},
-    # the delta time between master and unix in usec
-    "delta_mu_usec": {"dtype": "int32"},
-    # the abs(time) between master and unix in usec
-    "abs_delta_mu_usec": {"dtype": "int32"},
-    # startsec
-    "to_start_sec": {"dtype": "int32"},
-    # startusec
-    "to_start_usec": {"dtype": "int32"},
-    # start pps of the next dead window
-    "dr_start_pps": {"dtype": "int32"},
-    # start ticks of the next dead window
-    "dr_start_ticks": {"dtype": "int32"},
-    # stop pps of the next dead window
-    "dr_stop_pps": {"dtype": "int32"},
-    # stop ticks of the next dead window
-    "dr_stop_ticks": {"dtype": "int32"},
-    # maxticks of the dead window
-    "dr_maxticks": {"dtype": "int32"},
-    # current dead time calculated from deadregion (dr) fields.
-    # Give the total dead time if summed up.
-    "deadtime": {"dtype": "float64"},
-    # waveform data
-    "waveform": {
-        "dtype": "uint16",
-        "datatype": "waveform",
-        "wf_len": 65532,  # max value. override this before initializing buffers to save RAM
-        "dt": 16,  # override if a different clock rate is used
-        "dt_units": "ns",
-        "t0_units": "ns",
-    },
+fc_event_decoded_values = copy.deepcopy(fc_eventheader_decoded_values)
+
+# The event decoding splits all array values into scalars to allow
+# decoding per key
+for key in [
+    "board_id",
+    "fc_input",
+    "runtime",
+    "lifetime",
+    "deadtime",
+    "deadtime_nsec",
+    "deadinterval_nsec",
+    "baseline",
+    "daqenergy",
+]:
+    fc_event_decoded_values[key].pop("datatype")
+    fc_event_decoded_values[key].pop("length_guess")
+
+# tracelist contains contains the mapping for array indices to channel indices
+fc_event_decoded_values.pop("tracelist")
+#
+fc_event_decoded_values["channel"] = {
+    "dtype": "uint16",
+    "description": "The index of each read out channel in this stream.",
+}
+
+# Event always carries a waveform
+fc_event_decoded_values["waveform"] = {
+    "dtype": "uint16",
+    "datatype": "waveform",
+    "wf_len": Limits.MaxSamples,  # max value. override this before initializing buffers to save RAM
+    "dt": 16,  # override if a different clock rate is used
+    "dt_units": "ns",
+    "t0_units": "ns",
 }
 """Default FlashCam Event decoded values.
 
@@ -92,13 +61,15 @@ class FCEventDecoder(DataDecoder):
     """Decode FlashCam digitizer event data."""
 
     def __init__(self, *args, **kwargs) -> None:
-        # these are read for every event (decode_event)
-        self.decoded_values = copy.deepcopy(fc_decoded_values)
+        self.decoded_values = copy.deepcopy(fc_event_decoded_values)
         super().__init__(*args, **kwargs)
         self.skipped_channels = {}
-        self.fc_config = None
 
-    def set_file_config(self, fc_config: lgdo.Struct) -> None:
+        # lookup table for the key list, populated in `set_fcio_stream`.
+        self.key_list = []
+        self.max_rows_in_packet = 0
+
+    def set_fcio_stream(self, fcio_stream: FCIO) -> None:
         """Access ``FCIOConfig`` members once when each file is opened.
 
         Parameters
@@ -106,23 +77,35 @@ class FCEventDecoder(DataDecoder):
         fc_config
             extracted via :meth:`~.fc_config_decoder.FCConfigDecoder.decode_config`.
         """
-        self.fc_config = fc_config
-        self.decoded_values["waveform"]["wf_len"] = self.fc_config["nsamples"].value
-        self.decoded_values["tracelist"]["length_guess"] = self.fc_config["nadcs"].value
 
-    def get_key_lists(self) -> range:
-        return [list(range(self.fc_config["nadcs"].value))]
+        self.key_list = []
+        n_traces = len(fcio_stream.config.tracemap)
+        self.max_rows_in_packet = n_traces
 
-    def get_decoded_values(self, channel: int = None) -> dict[str, dict[str, Any]]:
-        # FC uses the same values for all channels
-        return self.decoded_values
+        self.decoded_values["waveform"]["wf_len"] = fcio_stream.config.eventsamples
+        self.decoded_values["waveform"]["dt"] = fcio_stream.config.sampling_period_ns
+
+        for trace_info in fcio_stream.config.tracemap:
+            key = get_key(
+                fcio_stream.config.streamid, trace_info >> 16, trace_info & 0xFFFF
+            )
+            self.key_list.append(key)
+        log.debug(
+            f"set_file_config: n_traces {n_traces} max_rows {self.max_rows_in_packet} key_list {len(self.key_list)}"
+        )
 
     def get_max_rows_in_packet(self) -> int:
-        return self.fc_config["nadcs"].value
+        return self.max_rows_in_packet
+
+    def get_key_lists(self) -> list[list[int | str]]:
+        return [copy.deepcopy(self.key_list)]
+
+    def get_decoded_values(self, key: int | str = None) -> dict[str, dict[str, Any]]:
+        return self.decoded_values
 
     def decode_packet(
         self,
-        fcio: fcutils.fcio,
+        fcio: FCIO,
         evt_rbkd: lgdo.Table | dict[int, lgdo.Table],
         packet_id: int,
     ) -> bool:
@@ -136,79 +119,86 @@ class FCEventDecoder(DataDecoder):
             be read out.
         evt_rbkd
             A single table for reading out all data, or a dictionary of tables
-            keyed by channel number.
+            keyed by rawid.
         packet_id
             The index of the packet in the `fcio` stream. Incremented by
             :class:`~.fc.fc_streamer.FCStreamer`.
 
         Returns
         -------
-        n_bytes
-            (estimated) number of bytes in the packet that was just decoded.
+        any_full
+            TODO
         """
         any_full = False
 
         # a list of channels is read out simultaneously for each event
-        for iwf in fcio.tracelist:
-            if iwf not in evt_rbkd:
-                if iwf not in self.skipped_channels:
+        for ii, trace_idx in enumerate(fcio.event.trace_list):
+            key = self.key_list[trace_idx]
+            log.debug(f"decoding key {key}")
+            if key not in evt_rbkd:
+                if key not in self.skipped_channels:
                     # TODO: should this be a warning instead?
-                    log.debug(f"skipping packets from channel {iwf}...")
-                    self.skipped_channels[iwf] = 0
-                self.skipped_channels[iwf] += 1
+                    log.debug(
+                        f"skipping packets from channel {trace_idx} index {ii} / key {key}..."
+                    )
+                    self.skipped_channels[key] = 0
+                self.skipped_channels[key] += 1
                 continue
-            tbl = evt_rbkd[iwf].lgdo
-            if fcio.nsamples != tbl["waveform"]["values"].nda.shape[1]:
+
+            tbl = evt_rbkd[key].lgdo
+            loc = evt_rbkd[key].loc
+
+            tbl["channel"].nda[loc] = trace_idx
+            tbl["packet_id"].nda[loc] = packet_id
+            tbl["fcid"].nda[loc] = fcio.config.streamid & 0xFFFF
+            tbl["board_id"].nda[loc] = fcio.event.card_address[ii]
+            tbl["fc_input"].nda[loc] = fcio.event.card_channel[ii]
+            tbl["event_type"].nda[loc] = fcio.event.type
+            tbl["eventnumber"].nda[loc] = fcio.event.timestamp[0]
+            tbl["numtraces"].nda[loc] = fcio.event.num_traces
+            tbl["ts_pps"].nda[loc] = fcio.event.timestamp[1]
+            tbl["ts_ticks"].nda[loc] = fcio.event.timestamp[2]
+            tbl["ts_maxticks"].nda[loc] = fcio.event.timestamp[3]
+            tbl["mu_offset_sec"].nda[loc] = fcio.event.timeoffset[0]
+            tbl["mu_offset_usec"].nda[loc] = fcio.event.timeoffset[1]
+            tbl["to_master_sec"].nda[loc] = fcio.event.timeoffset[2]
+            tbl["delta_mu_usec"].nda[loc] = fcio.event.timeoffset[3]
+            tbl["abs_delta_mu_usec"].nda[loc] = fcio.event.timeoffset[4]
+            tbl["to_start_sec"].nda[loc] = fcio.event.timeoffset[5]
+            tbl["to_start_usec"].nda[loc] = fcio.event.timeoffset[6]
+            tbl["dr_start_pps"].nda[loc] = fcio.event.deadregion[0]
+            tbl["dr_start_ticks"].nda[loc] = fcio.event.deadregion[1]
+            tbl["dr_stop_pps"].nda[loc] = fcio.event.deadregion[2]
+            tbl["dr_stop_ticks"].nda[loc] = fcio.event.deadregion[3]
+            tbl["dr_maxticks"].nda[loc] = fcio.event.deadregion[4]
+            if fcio.event.deadregion_size >= 7:
+                tbl["dr_ch_idx"].nda[loc] = fcio.event.deadregion[5]
+                tbl["dr_ch_len"].nda[loc] = fcio.event.deadregion[6]
+            else:
+                tbl["dr_ch_idx"].nda[loc] = 0
+                tbl["dr_ch_len"].nda[loc] = fcio.config.adcs
+
+            # The following values are calculated values by fcio-py
+            tbl["timestamp"].nda[loc] = fcio.event.unix_time_utc_sec
+            tbl["deadinterval_nsec"].nda[loc] = fcio.event.dead_interval_nsec[ii]
+            tbl["deadtime"].nda[loc] = fcio.event.dead_time_sec[ii]
+            tbl["deadtime_nsec"].nda[loc] = fcio.event.dead_time_nsec[ii]
+            tbl["lifetime"].nda[loc] = fcio.event.life_time_sec[ii]
+            tbl["runtime"].nda[loc] = fcio.event.run_time_sec[ii]
+            tbl["baseline"].nda[loc] = fcio.event.fpga_baseline[ii]
+            tbl["daqenergy"].nda[loc] = fcio.event.fpga_energy[ii]
+
+            tbl["waveform"]["values"].nda[loc][:] = fcio.event.trace[ii]
+            if fcio.config.eventsamples != tbl["waveform"]["values"].nda.shape[1]:
                 log.warning(
                     "event wf length was",
-                    fcio.nsamples,
+                    fcio.config.eventsamples,
                     "when",
                     self.decoded_values["waveform"]["wf_len"],
                     "were expected",
                 )
-            ii = evt_rbkd[iwf].loc
 
-            # fill the table
-            tbl["channel"].nda[ii] = iwf
-            tbl["packet_id"].nda[ii] = packet_id
-            tbl["eventnumber"].nda[
-                ii
-            ] = fcio.eventnumber  # the eventnumber since the beginning of the file
-            tbl["timestamp"].nda[ii] = fcio.eventtime  # the time since epoch in seconds
-            tbl["runtime"].nda[
-                ii
-            ] = fcio.runtime  # the time since the beginning of the file in seconds
-            tbl["numtraces"].nda[ii] = fcio.numtraces  # number of triggered adcs
-            tbl["tracelist"]._set_vector_unsafe(
-                ii, fcio.tracelist
-            )  # list of triggered adcs
-            tbl["baseline"].nda[ii] = fcio.baseline[
-                iwf
-            ]  # the fpga baseline values for each channel in LSB
-            tbl["daqenergy"].nda[ii] = fcio.daqenergy[
-                iwf
-            ]  # the fpga energy values for each channel in LSB
-            tbl["ts_pps"].nda[ii] = fcio.timestamp_pps
-            tbl["ts_ticks"].nda[ii] = fcio.timestamp_ticks
-            tbl["ts_maxticks"].nda[ii] = fcio.timestamp_maxticks
-            tbl["mu_offset_sec"].nda[ii] = fcio.timeoffset_mu_sec
-            tbl["mu_offset_usec"].nda[ii] = fcio.timeoffset_mu_usec
-            tbl["to_master_sec"].nda[ii] = fcio.timeoffset_master_sec
-            tbl["delta_mu_usec"].nda[ii] = fcio.timeoffset_dt_mu_usec
-            tbl["abs_delta_mu_usec"].nda[ii] = fcio.timeoffset_abs_mu_usec
-            tbl["to_start_sec"].nda[ii] = fcio.timeoffset_start_sec
-            tbl["to_start_usec"].nda[ii] = fcio.timeoffset_start_usec
-            tbl["dr_start_pps"].nda[ii] = fcio.deadregion_start_pps
-            tbl["dr_start_ticks"].nda[ii] = fcio.deadregion_start_ticks
-            tbl["dr_stop_pps"].nda[ii] = fcio.deadregion_stop_pps
-            tbl["dr_stop_ticks"].nda[ii] = fcio.deadregion_stop_ticks
-            tbl["dr_maxticks"].nda[ii] = fcio.deadregion_maxticks
-            tbl["deadtime"].nda[ii] = fcio.deadtime
-
-            # if len(traces[iwf]) != fcio.nsamples: # number of sample per trace check
-            tbl["waveform"]["values"].nda[ii][:] = fcio.traces[iwf]
-
-            evt_rbkd[iwf].loc += 1
-            any_full |= evt_rbkd[iwf].is_full()
+            evt_rbkd[key].loc += 1
+            any_full |= evt_rbkd[key].is_full()
 
         return bool(any_full)
