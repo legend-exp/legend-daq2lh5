@@ -16,8 +16,10 @@ LLAMA_Channel_Configs_t = Dict[int, Dict[str, Any]]
 
 
 class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
-    """
-    Decode llamaDAQ header data. Includes the file header as well as all available ("open") channel configurations.
+    """Decode llamaDAQ header data.
+
+    Includes the file header as well as all available ("open") channel
+    configurations.
     """
 
     @staticmethod
@@ -62,7 +64,7 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
 
         n_bytes_read += self.__decode_channel_configs(f_in)
 
-        # print(self.channel_configs[0]["MAW3_offset"])
+        # print(self.channel_configs[0]["maw3_offset"])
 
         # assemble LGDO struct:
         self.config.add_field("version_major", lgdo.Scalar(self.version_major))
@@ -87,14 +89,15 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
         return self.channel_configs
 
     def __decode_channel_configs(self, f_in: io.BufferedReader) -> int:
-        """
-        Reads the metadata from the beginning of the file (the "channel configuration" part, directly after the file header).
-        Creates a dictionary of the metadata for each FADC/channel combination, which is returned
+        """Reads the metadata.
+
+        Reads the metadata from the beginning of the file (the "channel
+        configuration" part, directly after the file header).  Creates a
+        dictionary of the metadata for each FADC/channel combination, which is
+        returned. Returns number of bytes read.
 
         FADC-ID and channel-ID are combined into a single id for flattening:
-            (fadcid << 4) + chid
-
-        returns number of bytes read
+        ``(fadcid << 4) + chid``.
         """
         # f_in.seek(16)    #should be after file header anyhow, but re-set if not
         n_bytes_read = 0
@@ -118,15 +121,16 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
 
             if fch_id in self.channel_configs:
                 raise RuntimeError(
-                    f"duplicate channel configuration in file: FADCID: {fadc_index}, ChannelID: {channel_index}"
+                    f"duplicate channel configuration in file: FADCID: "
+                    f"{fadc_index}, ChannelID: {channel_index}"
                 )
             else:
                 self.channel_configs[fch_id] = {}
 
-            self.channel_configs[fch_id]["14BitFlag"] = evt_data_32[2] & 0x00000001
+            self.channel_configs[fch_id]["14_bit_flag"] = evt_data_32[2] & 0x00000001
             if evt_data_32[2] & 0x00000002 == 0:
                 log.warning("Channel in configuration marked as non-open!")
-            self.channel_configs[fch_id]["ADC_offset"] = evt_data_32[3]
+            self.channel_configs[fch_id]["adc_offset"] = evt_data_32[3]
             self.channel_configs[fch_id]["sample_freq"] = evt_data_dpf[
                 0
             ]  # 64 bit float
@@ -138,12 +142,12 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
             self.channel_configs[fch_id]["avg_mode"] = evt_data_32[12]
             self.channel_configs[fch_id]["sample_length"] = evt_data_32[13]
             self.channel_configs[fch_id]["avg_sample_length"] = evt_data_32[14]
-            self.channel_configs[fch_id]["MAW_buffer_length"] = evt_data_32[15]
+            self.channel_configs[fch_id]["maw_buffer_length"] = evt_data_32[15]
             self.channel_configs[fch_id]["event_length"] = evt_data_32[16]
             self.channel_configs[fch_id]["event_header_length"] = evt_data_32[17]
             self.channel_configs[fch_id]["accum6_offset"] = evt_data_32[18]
             self.channel_configs[fch_id]["accum2_offset"] = evt_data_32[19]
-            self.channel_configs[fch_id]["MAW3_offset"] = evt_data_32[20]
+            self.channel_configs[fch_id]["maw3_offset"] = evt_data_32[20]
             self.channel_configs[fch_id]["energy_offset"] = evt_data_32[21]
 
         return n_bytes_read
