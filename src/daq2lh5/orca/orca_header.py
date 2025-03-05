@@ -46,16 +46,19 @@ class OrcaHeader(dict):
                 return d["Run Control"]["RunNumber"]
         raise ValueError("No run number found in header!")
 
-    def get_object_info(self, orca_class_name: str) -> dict[int, dict[int, dict]]:
+    def get_object_info(self, orca_class_name: str | list[str]) -> dict[int, dict[int, dict]]:
         """Returns a ``dict[crate][card]`` with all info from the header for
         each card with name `orca_class_name`.
         """
         object_info_dict = {}
 
+        if isinstance(orca_class_name,str):
+            orca_class_name = [orca_class_name]
+
         crates = self["ObjectInfo"]["Crates"]
         for crate in crates:
             for card in crate["Cards"]:
-                if card["Class Name"] == orca_class_name:
+                if card["Class Name"] in orca_class_name:
                     if crate["CrateNumber"] not in object_info_dict:
                         object_info_dict[crate["CrateNumber"]] = {}
                     object_info_dict[crate["CrateNumber"]][card["Card"]] = card
