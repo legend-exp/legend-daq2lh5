@@ -97,7 +97,6 @@ class DataStreamer(ABC):
         dec_names = []
         for decoder in decoders:
             dec_name = type(decoder).__name__
-
             # set up wildcard decoder buffers
             if dec_name not in rb_lib:
                 if "*" not in rb_lib:
@@ -128,33 +127,54 @@ class DataStreamer(ABC):
             # dec_name is in rb_lib: store the name, and initialize its buffer lgdos
             dec_names.append(dec_name)
 
-            # set up wildcard key buffers
+            # Parse wildcard keys in RawBuffers and replace with known keys of the decoder.
+            dec_key_list = sum(decoder.get_key_lists(), [])
+            dec_key_type = type(dec_key_list[0]) # requires consistent types
+            dec_key_list = set(map(str,dec_key_list))
+
+            # track keys which are already used
+            matched_keys = set()
+            only_wildcard_rb = None
+            wildcard_rbs = []
+            # find wildcard key buffers
             for rb in rb_lib[dec_name]:
-                if (
-                    len(rb.key_list) == 1
-                    and isinstance(rb.key_list[0], str)
-                    and "*" in rb.key_list[0]
-                ):
-                    matched_key_lists = []
-                    for key_list in decoder.get_key_lists():
-                        # special case: decoders without keys
-                        if rb.key_list[0] == "*" and key_list == [None]:
-                            matched_key_lists.append(key_list)
-                            continue
-                        key_type = type(key_list[0])
-                        for ik in range(len(key_list)):
-                            key_list[ik] = str(key_list[ik])
-                        matched_keys = fnmatch.filter(key_list, rb.key_list[0])
-                        if len(matched_keys) > 1:
-                            for ik in range(len(matched_keys)):
-                                matched_keys[ik] = key_type(key_list[ik])
-                            matched_key_lists.append(matched_keys)
-                    if len(matched_key_lists) == 0:
-                        log.warning(
-                            f"no matched keys for key_list {rb.key_list[0]} in {dec_name}.{rb.out_name}"
-                        )
+                for key in rb.key_list:
+                    if not isinstance(key, str):
+                        matched_keys.add(key)
                         continue
-                    rb.key_list = sum(matched_key_lists, [])
+                    if key == "*":
+                        if only_wildcard_rb is None:
+                            only_wildcard_rb = rb
+                        else:
+                            raise KeyError(f"Only one '*' wildcard key allowed for decoder {dec_name}")
+
+                    elif "*" in key:
+                        wildcard_rbs.append(rb)
+                    else:
+                        matched_keys.add(key)
+            # append pure wildcard, so it matches last
+            if only_wildcard_rb is not None:
+                wildcard_rbs.append(only_wildcard_rb)
+
+            # remove already matched keys
+            dec_key_list = dec_key_list.symmetric_difference(matched_keys)
+
+            for rb in wildcard_rbs:
+                matched_keys = set()
+                for key in rb.key_list:
+                    # find matching keys in the decoder list
+                    matches = set(fnmatch.filter(dec_key_list, key))
+                    dec_key_list = dec_key_list.symmetric_difference(matches)
+
+                    log.debug(f"{dec_name} {key} matched keys: {matches}")
+                    log.debug(f"{dec_name} remaining keys: {dec_key_list}")
+                    matched_keys |= matches
+
+                rb.key_list = [dec_key_type(_) if _ != 'None' else None for _ in matched_keys]
+                if len(rb.key_list) == 0:
+                    log.warning(f"no matched keys for key_list {rb.key_list} in {dec_name}.{rb.out_name}")
+                log.debug(f"{dec_name}:{rb.out_stream}/{rb.out_name} matched wildcards to {rb.key_list}")
+
             keyed_name_rbs = []
             ii = 0
             while ii < len(rb_lib[dec_name]):
@@ -175,7 +195,6 @@ class DataStreamer(ABC):
                         else:
                             key = str(key)
                         expanded_name = rb.out_name.format(key=key)
-
                     new_rb = RawBuffer(
                         key_list=[key],
                         out_stream=rb.out_stream,
@@ -191,7 +210,7 @@ class DataStreamer(ABC):
                 rb.fill_safety = decoder.get_max_rows_in_packet()
                 if buffer_size < rb.fill_safety:
                     raise ValueError(
-                        f"{dec_name} requires a buffer of at least length"
+                        f"{dec_name} requires a buffer of at least length "
                         f"{rb.fill_safety} but buffer size is only {buffer_size}"
                     )
 
@@ -333,6 +352,7 @@ class DataStreamer(ABC):
         """
         rb_lib = RawBufferLibrary()
         decoders = self.get_decoder_list()
+        log.debug(f"Default rb_lib knows about: {decoders}")
         if len(decoders) == 0:
             log.warning(
                 f"no decoders returned by get_decoder_list() for {type(self).__name__}"
@@ -344,6 +364,7 @@ class DataStreamer(ABC):
             if dec_key.endswith("Decoder"):
                 dec_key = dec_key.removesuffix("Decoder")
             key_lists = decoder.get_key_lists()
+            log.debug(f"{dec_key} supports keys {key_lists}")
             for ii, key_list in enumerate(key_lists):
                 this_name = dec_key
                 if len(key_lists) > 1:
