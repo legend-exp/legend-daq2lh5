@@ -200,7 +200,7 @@ def build_raw(
         in_stream,
         rb_lib=rb_lib,
         buffer_size=buffer_size,
-        chunk_mode="full_only",
+        chunk_mode="only_full",
         out_stream=out_stream,
     )
     rb_lib = streamer.rb_lib
