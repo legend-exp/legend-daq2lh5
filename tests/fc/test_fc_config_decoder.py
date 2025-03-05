@@ -14,7 +14,7 @@ def test_values(fcio_config):
         "nsamples": 6000,
         "nadcs": 6,
         "ntriggers": 0,
-        "telid": 0,
+        "streamid": 0,
         "adcbits": 16,
         "sumlength": 1,
         "blprecision": 1,

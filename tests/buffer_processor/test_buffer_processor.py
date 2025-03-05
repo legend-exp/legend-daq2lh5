@@ -10,10 +10,10 @@ from lgdo import lh5
 from lgdo.compression import RadwareSigcompress, ULEB128ZigZagDiff
 
 from daq2lh5.build_raw import build_raw
-from daq2lh5.fc.fc_event_decoder import fc_decoded_values
+from daq2lh5.fc.fc_event_decoder import fc_event_decoded_values
 
 # skip waveform compression in build_raw
-fc_decoded_values["waveform"].pop("compression", None)
+fc_event_decoded_values["waveform"].pop("compression", None)
 
 config_dir = Path(__file__).parent / "test_buffer_processor_configs"
 
@@ -71,7 +71,7 @@ def test_buffer_processor_waveform_lengths(lgnd_test_data, tmptestdir):
     out_spec = {
         "FCEventDecoder": {
             "ch{key}": {
-                "key_list": [[0, 6]],
+                "key_list": [[52800, 52806]],
                 "out_stream": processed_file + ":{name}",
                 "out_name": "raw",
                 "proc_spec": {
@@ -105,7 +105,7 @@ def test_buffer_processor_waveform_lengths(lgnd_test_data, tmptestdir):
     copy_out_spec = {
         "FCEventDecoder": {
             "ch{key}": {
-                "key_list": [[0, 6]],
+                "key_list": [[52800, 52806]],
                 "out_stream": raw_file + ":{name}",
                 "out_name": "raw",
             }
@@ -114,7 +114,7 @@ def test_buffer_processor_waveform_lengths(lgnd_test_data, tmptestdir):
 
     build_raw(in_stream=daq_file, out_spec=out_spec, overwrite=True)
 
-    proc_spec = out_spec["FCEventDecoder"]["ch0"].pop("proc_spec")
+    proc_spec = out_spec["FCEventDecoder"]["ch52800"].pop("proc_spec")
     dsp_config = proc_spec["dsp_config"]
     window_config = proc_spec["window"]
 
@@ -298,7 +298,7 @@ def test_buffer_processor_separate_name_tables(lgnd_test_data, tmptestdir):
     out_spec = {
         "FCEventDecoder": {
             "geds": {
-                "key_list": [[0, 3]],
+                "key_list": [[52800, 52803]],
                 "out_stream": processed_file + ":{name}",
                 "out_name": "raw",
                 "proc_spec": {
@@ -327,7 +327,7 @@ def test_buffer_processor_separate_name_tables(lgnd_test_data, tmptestdir):
                 },
             },
             "spms": {
-                "key_list": [[3, 6]],
+                "key_list": [[52803, 52806]],
                 "out_stream": processed_file + ":{name}",
                 "out_name": "raw",
                 "proc_spec": {
@@ -361,12 +361,12 @@ def test_buffer_processor_separate_name_tables(lgnd_test_data, tmptestdir):
     copy_out_spec = {
         "FCEventDecoder": {
             "geds": {
-                "key_list": [[0, 3]],
+                "key_list": [[52800, 52803]],
                 "out_stream": raw_file + ":{name}",
                 "out_name": "raw",
             },
             "spms": {
-                "key_list": [[3, 6]],
+                "key_list": [[52803, 52806]],
                 "out_stream": raw_file + ":{name}",
                 "out_name": "raw",
             },
@@ -494,7 +494,7 @@ def test_proc_geds_no_proc_spms(lgnd_test_data, tmptestdir):
     out_spec = {
         "FCEventDecoder": {
             "geds": {
-                "key_list": [[0, 1]],
+                "key_list": [[52800, 52801]],
                 "out_stream": processed_file + ":{name}",
                 "out_name": "raw",
                 "proc_spec": {
@@ -536,7 +536,7 @@ def test_proc_geds_no_proc_spms(lgnd_test_data, tmptestdir):
                 },
             },
             "spms": {
-                "key_list": [[3, 4]],
+                "key_list": [[52803, 52804]],
                 "out_stream": processed_file + ":{name}",
                 "out_name": "raw",
             },
@@ -546,12 +546,12 @@ def test_proc_geds_no_proc_spms(lgnd_test_data, tmptestdir):
     copy_out_spec = {
         "FCEventDecoder": {
             "geds": {
-                "key_list": [[0, 1]],
+                "key_list": [[52800, 52801]],
                 "out_stream": raw_file + ":{name}",
                 "out_name": "raw",
             },
             "spms": {
-                "key_list": [[3, 4]],
+                "key_list": [[52803, 52804]],
                 "out_stream": raw_file + ":{name}",
                 "out_name": "raw",
             },
@@ -1332,7 +1332,7 @@ def test_buffer_processor_compression_settings(lgnd_test_data, tmptestdir):
     out_spec = {
         "FCEventDecoder": {
             "ch{key}": {
-                "key_list": [[0, 6]],
+                "key_list": [[52800, 52806]],
                 "out_stream": processed_file + ":{name}",
                 "out_name": "raw",
                 "proc_spec": {
@@ -1376,10 +1376,10 @@ def test_buffer_processor_compression_settings(lgnd_test_data, tmptestdir):
 
     sto = lh5.LH5Store()
     presum_wf, _ = sto.read(
-        "/ch0/raw/presummed_waveform/values", processed_file, decompress=False
+        "/ch52800/raw/presummed_waveform/values", processed_file, decompress=False
     )
     window_wf, _ = sto.read(
-        "/ch0/raw/windowed_waveform/values", processed_file, decompress=False
+        "/ch52800/raw/windowed_waveform/values", processed_file, decompress=False
     )
 
     assert isinstance(presum_wf, lgdo.ArrayOfEncodedEqualSizedArrays)

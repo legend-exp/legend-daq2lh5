@@ -8,7 +8,7 @@ from lgdo import lh5
 from lgdo.compression import ULEB128ZigZagDiff
 
 from daq2lh5 import build_raw
-from daq2lh5.fc.fc_event_decoder import fc_decoded_values
+from daq2lh5.fc.fc_event_decoder import fc_event_decoded_values
 
 config_dir = Path(__file__).parent / "configs"
 
@@ -76,20 +76,20 @@ def test_invalid_user_buffer_size(lgnd_test_data, tmptestdir):
 def test_build_raw_fc_out_spec(lgnd_test_data, tmptestdir):
     out_file = f"{tmptestdir}/L200-comm-20211130-phy-spms.lh5"
     out_spec = {
-        "FCEventDecoder": {"spms": {"key_list": [[2, 4]], "out_stream": out_file}}
+        "FCEventDecoder": {"spms": {"key_list": [[52802, 52804]], "out_stream": out_file}}
     }
 
     build_raw(
         in_stream=lgnd_test_data.get_path("fcio/L200-comm-20211130-phy-spms.fcio"),
         out_spec=out_spec,
-        n_max=10,
+        n_max=10 * 3, # decode 10 events of 3 channels per record into one table
         overwrite=True,
     )
 
     store = lh5.LH5Store()
     lh5_obj, n_rows = store.read("/spms", out_file)
-    assert n_rows == 10
-    assert (lh5_obj["channel"].nda == [2, 3, 4, 2, 3, 4, 2, 3, 4, 2]).all()
+    assert n_rows == 10 * 3
+    assert (lh5_obj["channel"].nda == [2, 3, 4] * 10).all()
 
     with open(f"{config_dir}/fc-out-spec.json") as f:
         out_spec = json.load(f)
@@ -111,7 +111,7 @@ def test_build_raw_fc_channelwise_out_spec(lgnd_test_data, tmptestdir):
     out_spec = {
         "FCEventDecoder": {
             "ch{key}": {
-                "key_list": [[0, 6]],
+                "key_list": [[52800, 52806 ]],
                 "out_stream": out_file + ":{name}",
                 "out_name": "raw",
             }
@@ -124,9 +124,9 @@ def test_build_raw_fc_channelwise_out_spec(lgnd_test_data, tmptestdir):
         overwrite=True,
     )
 
-    assert lh5.ls(out_file) == ["ch0", "ch1", "ch2", "ch3", "ch4", "ch5"]
-    assert lh5.ls(out_file, "ch0/") == ["ch0/raw"]
-    assert lh5.ls(out_file, "ch0/raw/waveform") == ["ch0/raw/waveform"]
+    assert lh5.ls(out_file) == ["ch52800", "ch52801", "ch52802", "ch52803", "ch52804", "ch52805"]
+    assert lh5.ls(out_file, "ch52800/") == ["ch52800/raw"]
+    assert lh5.ls(out_file, "ch52800/raw/waveform") == ["ch52800/raw/waveform"]
 
 
 def test_build_raw_orca(lgnd_test_data, tmptestdir):
@@ -198,7 +198,7 @@ def test_build_raw_hdf5_settings(lgnd_test_data, tmptestdir):
 
 
 def test_build_raw_hdf5_settings_in_decoded_values(lgnd_test_data, tmptestdir):
-    fc_decoded_values["packet_id"]["hdf5_settings"] = {
+    fc_event_decoded_values["packet_id"]["hdf5_settings"] = {
         "shuffle": False,
         "compression": "lzf",
     }
@@ -208,7 +208,7 @@ def test_build_raw_hdf5_settings_in_decoded_values(lgnd_test_data, tmptestdir):
         overwrite=True,
     )
 
-    del fc_decoded_values["packet_id"]["hdf5_settings"]
+    del fc_event_decoded_values["packet_id"]["hdf5_settings"]
 
     with h5py.File(
         lgnd_test_data.get_path("orca/fc/L200-comm-20220519-phy-geds.lh5")
@@ -220,8 +220,8 @@ def test_build_raw_hdf5_settings_in_decoded_values(lgnd_test_data, tmptestdir):
 def test_build_raw_wf_compression_in_decoded_values(lgnd_test_data, tmptestdir):
     out_file = lgnd_test_data.get_path("orca/fc/L200-comm-20220519-phy-geds.lh5")
 
-    fc_decoded_values["waveform"].setdefault("hdf5_settings", {"values": {}, "t0": {}})
-    fc_decoded_values["waveform"]["hdf5_settings"] = {
+    fc_event_decoded_values["waveform"].setdefault("hdf5_settings", {"values": {}, "t0": {}})
+    fc_event_decoded_values["waveform"]["hdf5_settings"] = {
         "values": {"shuffle": False, "compression": "lzf"},
         "t0": {"shuffle": True, "compression": None},
     }
@@ -237,16 +237,16 @@ def test_build_raw_wf_compression_in_decoded_values(lgnd_test_data, tmptestdir):
         assert f["ORFlashCamADCWaveform/waveform/t0"].shuffle is True
         assert f["ORFlashCamADCWaveform/waveform/t0"].compression is None
 
-    fc_decoded_values["waveform"].setdefault("compression", {"values": None})
-    fc_decoded_values["waveform"]["compression"]["values"] = ULEB128ZigZagDiff()
+    fc_event_decoded_values["waveform"].setdefault("compression", {"values": None})
+    fc_event_decoded_values["waveform"]["compression"]["values"] = ULEB128ZigZagDiff()
 
     build_raw(
         in_stream=lgnd_test_data.get_path("orca/fc/L200-comm-20220519-phy-geds.orca"),
         overwrite=True,
     )
 
-    del fc_decoded_values["waveform"]["hdf5_settings"]
-    del fc_decoded_values["waveform"]["compression"]
+    del fc_event_decoded_values["waveform"]["hdf5_settings"]
+    del fc_event_decoded_values["waveform"]["compression"]
 
     with h5py.File(out_file) as f:
         assert (
