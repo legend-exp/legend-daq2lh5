@@ -15,6 +15,12 @@ from .orca_digitizers import (  # noqa: F401
     ORSIS3302DecoderForEnergy,
     ORSIS3316WaveformDecoder,
 )
+from .orca_fcio import (  # noqa: F401;
+    ORFCIOConfigDecoder,
+    ORFCIOEventDecoder,
+    ORFCIOEventHeaderDecoder,
+    ORFCIOStatusDecoder,
+)
 from .orca_flashcam import (  # noqa: F401;
     ORFlashCamADCWaveformDecoder,
     ORFlashCamListenerConfigDecoder,
