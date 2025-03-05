@@ -11,10 +11,10 @@ from lgdo import lh5
 
 from daq2lh5.buffer_processor.lh5_buffer_processor import lh5_buffer_processor
 from daq2lh5.build_raw import build_raw
-from daq2lh5.fc.fc_event_decoder import fc_decoded_values
+from daq2lh5.fc.fc_event_decoder import fc_event_decoded_values
 
 # skip waveform compression in build_raw
-fc_decoded_values["waveform"].pop("compression", None)
+fc_event_decoded_values["waveform"].pop("compression", None)
 
 config_dir = Path(__file__).parent / "test_buffer_processor_configs"
 
@@ -65,7 +65,7 @@ def test_lh5_buffer_processor_waveform_lengths(lgnd_test_data):
     out_spec = {
         "FCEventDecoder": {
             "ch{key}": {
-                "key_list": [[0, 6]],
+                "key_list": [[52800, 52806]],
                 "out_stream": processed_file + ":{name}",
                 "out_name": "raw",
                 "proc_spec": {
@@ -98,7 +98,7 @@ def test_lh5_buffer_processor_waveform_lengths(lgnd_test_data):
     copy_out_spec = {
         "FCEventDecoder": {
             "ch{key}": {
-                "key_list": [[0, 6]],
+                "key_list": [[52800, 52806]],
                 "out_stream": raw_file + ":{name}",
                 "out_name": "raw",
             }
@@ -130,7 +130,7 @@ def test_lh5_buffer_processor_waveform_lengths(lgnd_test_data):
     jsonfile = proc_spec
 
     # Read in the presummed rate from the config file to modify the clock rate later
-    presum_rate_string = jsonfile["ch0"]["dsp_config"]["processors"][
+    presum_rate_string = jsonfile["ch52800"]["dsp_config"]["processors"][
         "presum_rate, presummed_waveform"
     ]["args"][3]
     presum_rate_start_idx = presum_rate_string.find("/") + 1
@@ -138,8 +138,8 @@ def test_lh5_buffer_processor_waveform_lengths(lgnd_test_data):
     presum_rate = int(presum_rate_string[presum_rate_start_idx:presum_rate_end_idx])
 
     # This needs to be overwritten with the correct windowing values set in buffer_processor.py
-    window_start_index = jsonfile["ch0"]["window"][1]
-    window_end_index = jsonfile["ch0"]["window"][2]
+    window_start_index = jsonfile["ch52800"]["window"][1]
+    window_end_index = jsonfile["ch52800"]["window"][2]
 
     sto = lh5.LH5Store()
 
@@ -313,12 +313,12 @@ def test_lh5_buffer_processor_separate_name_tables(lgnd_test_data):
     raw_out_spec = {
         "FCEventDecoder": {
             "geds": {
-                "key_list": [[0, 3]],
+                "key_list": [[52800, 52803]],
                 "out_stream": raw_file + ":{name}",
                 "out_name": "raw",
             },
             "spms": {
-                "key_list": [[3, 6]],
+                "key_list": [[52803, 52806]],
                 "out_stream": raw_file + ":{name}",
                 "out_name": "raw",
             },
@@ -328,7 +328,7 @@ def test_lh5_buffer_processor_separate_name_tables(lgnd_test_data):
     proc_out_spec = {
         "FCEventDecoder": {
             "geds": {
-                "key_list": [[0, 3]],
+                "key_list": [[52800, 52803]],
                 "out_stream": processed_file + ":{name}",
                 "out_name": "raw",
                 "proc_spec": {
@@ -356,7 +356,7 @@ def test_lh5_buffer_processor_separate_name_tables(lgnd_test_data):
                 },
             },
             "spms": {
-                "key_list": [[3, 6]],
+                "key_list": [[52803, 52806]],
                 "out_stream": processed_file + ":{name}",
                 "out_name": "raw",
                 "proc_spec": {
@@ -502,12 +502,12 @@ def test_raw_geds_no_proc_spms(lgnd_test_data):
     raw_out_spec = {
         "FCEventDecoder": {
             "geds": {
-                "key_list": [[0, 1]],
+                "key_list": [[52800, 52801]],
                 "out_stream": raw_file + ":{name}",
                 "out_name": "raw",
             },
             "spms": {
-                "key_list": [[3, 4]],
+                "key_list": [[52803, 52804]],
                 "out_stream": raw_file + ":{name}",
                 "out_name": "raw",
             },
@@ -517,7 +517,7 @@ def test_raw_geds_no_proc_spms(lgnd_test_data):
     proc_out_spec = {
         "FCEventDecoder": {
             "geds": {
-                "key_list": [[0, 1]],
+                "key_list": [[52800, 52801]],
                 "out_stream": processed_file + ":{name}",
                 "out_name": "raw",
                 "proc_spec": {
@@ -1062,7 +1062,7 @@ def test_lh5_buffer_processor_hdf5_settings(lgnd_test_data):
     out_spec = {
         "FCEventDecoder": {
             "ch{key}": {
-                "key_list": [[0, 6]],
+                "key_list": [[52800, 52806]],
                 "out_stream": processed_file + ":{name}",
                 "out_name": "raw",
                 "proc_spec": {
@@ -1102,5 +1102,5 @@ def test_lh5_buffer_processor_hdf5_settings(lgnd_test_data):
     build_raw(in_stream=daq_file, out_spec=out_spec, overwrite=True)
 
     with h5py.File(processed_file) as f:
-        assert f["ch0"]["raw"]["presummed_waveform"]["values"].compression == "lzf"
-        assert f["ch0"]["raw"]["presummed_waveform"]["values"].shuffle is False
+        assert f["ch52800"]["raw"]["presummed_waveform"]["values"].compression == "lzf"
+        assert f["ch52800"]["raw"]["presummed_waveform"]["values"].shuffle is False
