@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 
+import lgdo
+
 from fcio import FCIO, Tags, Limits
 from ..data_decoder import DataDecoder
 from ..data_streamer import DataStreamer
@@ -156,13 +158,14 @@ class FCStreamer(DataStreamer):
             # It seems like the `loc` of the RawBuffer is used as `len`
             # for individual elements in a `lgdo.Struct` while writing.
             # Search for longest and use as `loc` attr.
-            max_length = max(
-                [
-                    len(entry) if hasattr(entry, "__len__") else 1
-                    for entry in config_lgdo.values()
-                ]
-            )
-            rb.loc = max_length
+            if isinstance(config_lgdo, lgdo.Struct):
+                max_length = max(
+                    [
+                        len(entry) if hasattr(entry, "__len__") else 1
+                        for entry in config_lgdo.values()
+                    ]
+                )
+                rb.loc = max_length
             rbs.append(rb)
         return rbs
 

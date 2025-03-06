@@ -122,16 +122,13 @@ fc_status_decoded_values = {
 
 
 def get_key(streamid, reqid):
-    """
-        Similar to eventdecder but one less 1e5 instead of 1e6 for the streamid shift
-    """
-    return (streamid & 0xFFFF) * 100000 + (reqid & 0xFFFF)
+    return (streamid & 0xFFFF) * 1000000 + (reqid & 0xFFFF)
 
 def get_fcid(key: int) -> int:
-    return int(key // 100000)
+    return int(key // 10000000)
 
 def get_reqid(key: int) -> int:
-    return int(key % 100000)
+    return int(key % 1000000)
 
 
 class FCStatusDecoder(DataDecoder):

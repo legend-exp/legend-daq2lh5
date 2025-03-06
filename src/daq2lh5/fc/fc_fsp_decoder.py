@@ -13,11 +13,171 @@ from .fc_eventheader_decoder import get_key
 
 from ..data_decoder import DataDecoder
 
+fsp_config_decoded_values = {
+    "packet_id": {
+        "dtype": "uint32",
+        "description": "The index of this decoded packet in the file.",
+    },
+    "buffer_max_states" : { 'dtype' : 'int32', 'description' : ""},
+    "buffer_window_nsec" : { 'dtype' : 'int64', 'description' : ""},
+    "trg_hwm_min_multiplicity" : { 'dtype' : 'int32', 'description' : ""},
+    "trg_hwm_prescale_ratio" : { 'dtype' : 'int32', 'description' : ""},
+    "trg_wps_prescale_ratio" : { 'dtype' : 'int32', 'description' : ""},
+    "trg_wps_coincident_sum_threshold" : { 'dtype' : 'float32', 'description' : ""},
+    "trg_wps_sum_threshold" : { 'dtype' : 'float32', 'description' : ""},
+    "trg_wps_prescale_rate" : { 'dtype' : 'float32', 'description' : ""},
+    "trg_hwm_prescale_rate" : { 'dtype' : 'float32', 'description' : ""},
+    "trg_wps_ref_flags_hwm" : { 'dtype' : 'int64', 'description' : ""},
+    "trg_wps_ref_flags_ct" : { 'dtype' : 'int64', 'description' : ""},
+    "trg_wps_ref_flags_wps" : { 'dtype' : 'int64', 'description' : ""},
+    "trg_wps_ref_map_idx" : { 'dtype' : 'int32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "trg_enabled_write_flags_trigger" : { 'dtype' : 'int64', 'description' : ""},
+    "trg_enabled_write_flags_event" : { 'dtype' : 'int64', 'description' : ""},
+    "trg_pre_trigger_window_nsec" : { 'dtype' : 'int64', 'description' : ""},
+    "trg_post_trigger_window_nsec" : { 'dtype' : 'int64', 'description' : ""},
+    "dsp_wps_tracemap_format" : { 'dtype' : 'int32', 'description' : ""},
+    "dsp_wps_tracemap_indices" : { 'dtype' : 'int32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_wps_tracemap_enabled" : { 'dtype' : 'int32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_wps_tracemap_label" : { 'dtype' : '|S7', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_wps_gains" : { 'dtype' : 'float32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_wps_thresholds" : { 'dtype' : 'float32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_wps_lowpass" : { 'dtype' : 'float32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_wps_shaping_widths" : { 'dtype' : 'int32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_wps_margin_front" : { 'dtype' : 'int32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_wps_margin_back" : { 'dtype' : 'int32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_wps_start_sample" : { 'dtype' : 'int32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_wps_stop_sample" : { 'dtype' : 'int32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_wps_dsp_max_margin_front" : { 'dtype' : 'int32', 'description' : ""},
+    "dsp_wps_dsp_max_margin_back" : { 'dtype' : 'int32', 'description' : ""},
+    "dsp_wps_apply_gain_scaling" : { 'dtype' : 'int32', 'description' : ""},
+    "dsp_wps_sum_window_size" : { 'dtype' : 'int32', 'description' : ""},
+    "dsp_wps_sum_window_start_sample" : { 'dtype' : 'int32', 'description' : ""},
+    "dsp_wps_sum_window_stop_sample" : { 'dtype' : 'int32', 'description' : ""},
+    "dsp_wps_sub_event_sum_threshold" : { 'dtype' : 'float32', 'description' : ""},
+    "dsp_hwm_tracemap_format" : { 'dtype' : 'int32', 'description' : ""},
+    "dsp_hwm_tracemap_indices" : { 'dtype' : 'int32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_hwm_tracemap_enabled" : { 'dtype' : 'int32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_hwm_tracemap_label" : { 'dtype' : '|S7', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_hwm_fpga_energy_threshold_adc" : { 'dtype' : 'uint16', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_ct_tracemap_format" : { 'dtype' : 'int32', 'description' : ""},
+    "dsp_ct_tracemap_indices" : { 'dtype' : 'int32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_ct_tracemap_enabled" : { 'dtype' : 'int32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_ct_tracemap_label" : { 'dtype' : '|S7', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_ct_thresholds" : { 'dtype' : 'uint16', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+}
+
 
 class FSPConfigDecoder(DataDecoder):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.fsp_config = lgdo.Struct()
+
+        self.decoded_values = copy.deepcopy(fsp_config_decoded_values)
+        self.key_list = []
+
+    def set_fcio_stream(self, fcio_stream: FCIO) -> None:
+        self.key_list = [f"fsp_config_{get_key(fcio_stream.config.streamid, 0, 0)}"]
+
+    def get_decoded_values(self, key: int = None) -> dict[str, dict[str, Any]]:
+        return self.decoded_values
+
+    def decode_packet(
+        self,
+        fcio: FCIO,
+        fsp_config_rb: lgdo.Table,
+        packet_id: int,
+    ) -> bool:
+
+        tbl = fsp_config_rb.lgdo
+        loc = fsp_config_rb.loc
+
+        # FSP: Buffer
+        buffer = fcio.fsp.config.buffer
+        # TriggerConfig
+        triggerconfig = fcio.fsp.config.triggerconfig
+        #  DSPWindowedPeakSum:
+        wps = fcio.fsp.config.wps
+        wps_n_traces = wps["tracemap"]["n_mapped"]
+        # DSPHardwareMajority:
+        hwm = fcio.fsp.config.hwm
+        hwm_n_traces = hwm["tracemap"]["n_mapped"]
+        # DSPChannelThreshold:
+        ct = fcio.fsp.config.ct
+        ct_n_traces = ct["tracemap"]["n_mapped"]
+
+        tbl["packet_id"].nda[loc] = packet_id
+
+        tbl["buffer_max_states"].nda[loc] = np.int32(buffer["max_states"])
+        tbl["buffer_window_nsec"].nda[loc] = np.int64(
+            buffer["buffer_window"]["seconds"] * 1e9
+            + buffer["buffer_window"]["nanoseconds"]
+        )
+        tbl["trg_hwm_min_multiplicity"].nda[loc] = np.int32(triggerconfig["hwm_min_multiplicity"])
+        tbl["trg_hwm_prescale_ratio"].nda[loc] = np.int32(triggerconfig["hwm_prescale_ratio"])
+        tbl["trg_wps_prescale_ratio"].nda[loc] = np.int32(triggerconfig["wps_prescale_ratio"])
+        tbl["trg_wps_coincident_sum_threshold"].nda[loc] = np.float32(triggerconfig["wps_coincident_sum_threshold"])
+        tbl["trg_wps_sum_threshold"].nda[loc] = np.float32(triggerconfig["wps_sum_threshold"])
+        tbl["trg_wps_prescale_rate"].nda[loc] = np.float32(triggerconfig["wps_prescale_rate"])
+        tbl["trg_hwm_prescale_rate"].nda[loc] = np.float32(triggerconfig["hwm_prescale_rate"])
+        tbl["trg_wps_ref_flags_hwm"].nda[loc] = np.int64(triggerconfig["wps_ref_flags_hwm"]["is_flagged"])
+        tbl["trg_wps_ref_flags_ct"].nda[loc] = np.int64(triggerconfig["wps_ref_flags_ct"]["is_flagged"])
+        tbl["trg_wps_ref_flags_wps"].nda[loc] = np.int64(triggerconfig["wps_ref_flags_wps"]["is_flagged"])
+        wps_ref_map_idx = np.array(triggerconfig["wps_ref_map_idx"], dtype="int32")[
+            : triggerconfig["n_wps_ref_map_idx"]
+        ]
+        tbl["trg_wps_ref_map_idx"]._set_vector_unsafe(loc, wps_ref_map_idx)
+
+        tbl["trg_enabled_write_flags_trigger"].nda[loc] = np.int64(triggerconfig["enabled_flags"]["trigger"]["is_flagged"])
+        tbl["trg_enabled_write_flags_event"].nda[loc] = np.int64(triggerconfig["enabled_flags"]["event"]["is_flagged"])
+        tbl["trg_pre_trigger_window_nsec"].nda[loc] = np.int64(
+            triggerconfig["pre_trigger_window"]["seconds"] * 1e9
+            + triggerconfig["pre_trigger_window"]["nanoseconds"]
+        )
+        tbl["trg_post_trigger_window_nsec"].nda[loc] = np.int64(
+            triggerconfig["post_trigger_window"]["seconds"] * 1e9
+            + triggerconfig["post_trigger_window"]["nanoseconds"]
+        )
+        tbl["dsp_wps_tracemap_format"].nda[loc] = np.int32(wps["tracemap"]["format"])
+        tbl["dsp_wps_tracemap_indices"]._set_vector_unsafe(loc, np.array(wps["tracemap"]["map"], dtype="int32")[:wps_n_traces])
+        tbl["dsp_wps_tracemap_enabled"]._set_vector_unsafe(loc, np.array(wps["tracemap"]["enabled"], dtype="int32")[
+            : wps["tracemap"]["n_enabled"]
+        ])
+        tbl["dsp_wps_tracemap_label"]._set_vector_unsafe(loc,np.array(wps["tracemap"]["label"], dtype="|S7")[:wps_n_traces])
+        tbl["dsp_wps_gains"]._set_vector_unsafe(loc,np.array(wps["gains"], dtype="float32")[:wps_n_traces])
+        tbl["dsp_wps_thresholds"]._set_vector_unsafe(loc,np.array(wps["thresholds"], dtype="float32")[:wps_n_traces])
+        tbl["dsp_wps_lowpass"]._set_vector_unsafe(loc,np.array(wps["lowpass"], dtype="float32")[:wps_n_traces])
+        tbl["dsp_wps_shaping_widths"]._set_vector_unsafe(loc,np.array(wps["shaping_widths"], dtype="int32")[:wps_n_traces])
+        tbl["dsp_wps_margin_front"]._set_vector_unsafe(loc,np.array(wps["dsp_margin_front"], dtype="int32")[:wps_n_traces])
+        tbl["dsp_wps_margin_back"]._set_vector_unsafe(loc,np.array(wps["dsp_margin_back"], dtype="int32")[:wps_n_traces])
+        tbl["dsp_wps_start_sample"]._set_vector_unsafe(loc,np.array(wps["dsp_start_sample"], dtype="int32")[:wps_n_traces])
+        tbl["dsp_wps_stop_sample"]._set_vector_unsafe(loc,np.array(wps["dsp_stop_sample"], dtype="int32")[:wps_n_traces])
+        tbl["dsp_wps_dsp_max_margin_front"].nda[loc] = np.int32(wps["dsp_max_margin_front"])
+        tbl["dsp_wps_dsp_max_margin_back"].nda[loc] = np.int32(wps["dsp_max_margin_back"])
+        tbl["dsp_wps_apply_gain_scaling"].nda[loc] = np.int32(wps["apply_gain_scaling"])
+        tbl["dsp_wps_sum_window_size"].nda[loc] = np.int32(wps["sum_window_size"])
+        tbl["dsp_wps_sum_window_start_sample"].nda[loc] = np.int32(wps["sum_window_start_sample"])
+        tbl["dsp_wps_sum_window_stop_sample"].nda[loc] = np.int32(wps["sum_window_stop_sample"])
+        tbl["dsp_wps_sub_event_sum_threshold"].nda[loc] = np.float32(wps["sub_event_sum_threshold"])
+        tbl["dsp_hwm_tracemap_format"].nda[loc] = np.int32(hwm["tracemap"]["format"])
+        tbl["dsp_hwm_tracemap_indices"]._set_vector_unsafe(loc, np.array(hwm["tracemap"]["map"], dtype="int32")[:hwm_n_traces])
+        tbl["dsp_hwm_tracemap_enabled"]._set_vector_unsafe(loc, np.array(hwm["tracemap"]["enabled"], dtype="int32")[
+            : hwm["tracemap"]["n_enabled"]
+        ])
+        tbl["dsp_hwm_tracemap_label"]._set_vector_unsafe(loc,  np.array(hwm["tracemap"]["label"], dtype="|S7")[:hwm_n_traces])
+        tbl["dsp_hwm_fpga_energy_threshold_adc"]._set_vector_unsafe(loc, np.array(hwm["fpga_energy_threshold_adc"], dtype="uint16")[
+            :hwm_n_traces
+        ])
+        tbl["dsp_ct_tracemap_format"].nda[loc] = np.int32(ct["tracemap"]["format"])
+        tbl["dsp_ct_tracemap_indices"]._set_vector_unsafe(loc, np.array(ct["tracemap"]["map"], dtype="int32")[:ct_n_traces])
+        tbl["dsp_ct_tracemap_enabled"]._set_vector_unsafe(loc, np.array(ct["tracemap"]["enabled"], dtype="int32")[
+            : ct["tracemap"]["n_enabled"]
+        ])
+        tbl["dsp_ct_tracemap_label"]._set_vector_unsafe(loc, np.array(ct["tracemap"]["label"], dtype="|S7")[:ct_n_traces])
+        tbl["dsp_ct_thresholds"]._set_vector_unsafe(loc, np.array(ct["thresholds"], dtype="uint16")[:ct_n_traces])
+
+        fsp_config_rb.loc += 1
+
+        return fsp_config_rb.is_full()
 
     def decode_config(self, fcio: FCIO) -> lgdo.Struct:
         # FSP: Buffer
@@ -263,6 +423,7 @@ class FSPConfigDecoder(DataDecoder):
         return self.fsp_config
 
 
+
 fsp_status_decoded_values = {
     "packet_id": {"dtype": "uint32"},
     "start_time": {"dtype": "float64"},
@@ -292,7 +453,7 @@ class FSPStatusDecoder(DataDecoder):
         self.key_list = []
 
     def set_fcio_stream(self, fcio_stream: FCIO) -> None:
-        self.key_list = [get_key(fcio_stream.config.streamid, 0, 0)]
+        self.key_list = [f"fsp_status_{get_key(fcio_stream.config.streamid, 0, 0)}"]
 
     def get_key_lists(self) -> list[list[int | str]]:
         return [copy.deepcopy(self.key_list)]
@@ -383,7 +544,7 @@ class FSPEventDecoder(DataDecoder):
 
     def set_fcio_stream(self, fcio_stream: FCIO) -> None:
 
-        self.key_list = [get_key(fcio_stream.config.streamid, 0, 0)]
+        self.key_list = [f"fsp_event_{get_key(fcio_stream.config.streamid, 0, 0)}"]
 
     def get_decoded_values(self, key: int = None) -> dict[str, dict[str, Any]]:
         return self.decoded_values

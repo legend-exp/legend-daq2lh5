@@ -134,7 +134,6 @@ class FCEventDecoder(DataDecoder):
         # a list of channels is read out simultaneously for each event
         for ii, trace_idx in enumerate(fcio.event.trace_list):
             key = self.key_list[trace_idx]
-            log.debug(f"decoding key {key}")
             if key not in evt_rbkd:
                 if key not in self.skipped_channels:
                     # TODO: should this be a warning instead?
