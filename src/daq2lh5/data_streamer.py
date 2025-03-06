@@ -132,6 +132,8 @@ class DataStreamer(ABC):
             dec_key_type = type(dec_key_list[0]) # requires consistent types
             dec_key_list = set(map(str,dec_key_list))
 
+            log.debug(f"{dec_name} offers keys {dec_key_list}")
+
             # track keys which are already used
             matched_keys = set()
             only_wildcard_rb = None
@@ -170,7 +172,19 @@ class DataStreamer(ABC):
                     log.debug(f"{dec_name} remaining keys: {dec_key_list}")
                     matched_keys |= matches
 
-                rb.key_list = [dec_key_type(_) if _ != 'None' else None for _ in matched_keys]
+                # Construct the new key_list for the RawBuffer
+                # Expect anything that can be cast to int wants to be cast
+                rb.key_list = []
+                for key in matched_keys:
+                    if key == 'None':
+                        rb.key_list.append(None)
+                    try:
+                        new_key = int(key)
+                        rb.key_list.append(new_key)
+                    except ValueError:
+                        rb.key_list.append(key)
+
+
                 if len(rb.key_list) == 0:
                     log.warning(f"no matched keys for key_list {rb.key_list} in {dec_name}.{rb.out_name}")
                 log.debug(f"{dec_name}:{rb.out_stream}/{rb.out_name} matched wildcards to {rb.key_list}")
