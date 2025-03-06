@@ -14,6 +14,10 @@ from ..data_decoder import DataDecoder
 log = logging.getLogger(__name__)
 
 fc_config_decoded_values = {
+  "packet_id": {
+      "dtype": "uint32",
+      "description": "The index of this decoded packet in the file.",
+  },
   "nsamples" :  {"dtype": "int32", "description" : "samples per channel"},
   "nadcs" :  {"dtype": "int32", "description" : "number of adc channels"},
   "ntriggers" :  {"dtype": "int32", "description" : "number of triggertraces"},
@@ -67,6 +71,8 @@ class FCConfigDecoder(DataDecoder):
         tbl = config_rb.lgdo
         loc = config_rb.loc
 
+        tbl["packet_id"].nda[loc] = packet_id
+
         tbl['nsamples'].nda[loc] = fcio.config.eventsamples
         tbl['nadcs'].nda[loc] = fcio.config.adcs
         tbl['ntriggers'].nda[loc] = fcio.config.triggers
@@ -80,6 +86,8 @@ class FCConfigDecoder(DataDecoder):
         tbl['gps'].nda[loc] = fcio.config.gps
         ntraces = fcio.config.adcs + fcio.config.triggers
         tbl['tracemap']._set_vector_unsafe(loc, fcio.config.tracemap[:ntraces])
+
+        config_rb.loc += 1
 
         return config_rb.is_full()
 
