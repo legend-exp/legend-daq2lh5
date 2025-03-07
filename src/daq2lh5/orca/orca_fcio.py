@@ -6,11 +6,7 @@ from fcio import FCIO, Tags
 
 from daq2lh5.fc.fc_config_decoder import FCConfigDecoder
 from daq2lh5.fc.fc_event_decoder import FCEventDecoder
-from daq2lh5.fc.fc_eventheader_decoder import (
-    FCEventHeaderDecoder,
-    get_fcid,
-    get_key,
-)
+from daq2lh5.fc.fc_eventheader_decoder import FCEventHeaderDecoder, get_fcid, get_key
 from daq2lh5.fc.fc_fsp_decoder import (
     FSPConfigDecoder,
     FSPEventDecoder,

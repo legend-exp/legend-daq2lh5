@@ -7,7 +7,6 @@ import lgdo
 import numpy as np
 from fcio import FCIO, Limits
 
-
 from ..data_decoder import DataDecoder
 from .fc_eventheader_decoder import get_key
 

@@ -7,7 +7,6 @@ import lgdo
 import numpy as np
 from fcio import FCIO, Limits
 
-
 from ..data_decoder import DataDecoder
 
 log = logging.getLogger(__name__)
