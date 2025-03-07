@@ -206,7 +206,6 @@ class FCEventHeaderDecoder(DataDecoder):
         self.decoded_values["tracelist"]["length_guess"] = n_traces
         self.decoded_values["board_id"]["length_guess"] = n_traces
         self.decoded_values["fc_input"]["length_guess"] = n_traces
-        self.decoded_values["deadtime_nsec"]["length_guess"] = n_traces
         self.decoded_values["deadinterval_nsec"]["length_guess"] = n_traces
         self.decoded_values["deadtime"]["length_guess"] = n_traces
         self.decoded_values["runtime"]["length_guess"] = n_traces
@@ -295,9 +294,6 @@ class FCEventHeaderDecoder(DataDecoder):
 
         tbl["deadtime"].flattened_data.nda[start:end] = fcio.event.dead_time_sec
         tbl["deadtime"].cumulative_length[loc] = end
-
-        tbl["deadtime_nsec"].flattened_data.nda[start:end] = fcio.event.dead_time_nsec
-        tbl["deadtime_nsec"].cumulative_length[loc] = end
 
         tbl["lifetime"].flattened_data.nda[start:end] = fcio.event.life_time_sec
         tbl["lifetime"].cumulative_length[loc] = end
