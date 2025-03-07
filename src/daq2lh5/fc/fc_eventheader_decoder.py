@@ -214,7 +214,6 @@ class FCEventHeaderDecoder(DataDecoder):
             extracted via :meth:`~.fc_config_decoder.FCConfigDecoder.decode_config`.
         """
         n_traces = len(fcio_stream.config.tracemap)
-        # self.max_rows_in_packet = max(n_traces, self.max_rows_in_packet)
 
         self.decoded_values["tracelist"]["length_guess"] = n_traces
         self.decoded_values["board_id"]["length_guess"] = n_traces
@@ -242,12 +241,16 @@ class FCEventHeaderDecoder(DataDecoder):
     def decode_packet(
         self,
         fcio: FCIO,
-        evt_hdr_rbkd: lgdo.Table | dict[int, lgdo.Table],
+        evt_hdr_rbkd: dict[int, lgdo.Table],
         packet_id: int,
     ) -> bool:
 
         # only one key available: this streamid
-        evt_hdr_rb = evt_hdr_rbkd[self.key_list[0]]
+        key = get_key(fcio.config.streamid, 0, 0)
+        if key not in evt_hdr_rbkd:
+            return False
+
+        evt_hdr_rb = evt_hdr_rbkd[key]
 
         tbl = evt_hdr_rb.lgdo
         loc = evt_hdr_rb.loc

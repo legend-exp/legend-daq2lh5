@@ -682,11 +682,14 @@ class FSPStatusDecoder(DataDecoder):
     def decode_packet(
         self,
         fcio: FCIO,
-        fsp_status_rbkd: lgdo.Table | dict[int, lgdo.Table],
+        fsp_status_rbkd: dict[int, lgdo.Table],
         packet_id: int,
     ) -> bool:
 
-        fsp_status_rb = fsp_status_rbkd[self.key_list[0]]
+        key = f"fsp_status_{get_key(fcio.config.streamid, 0, 0)}"
+        if key not in fsp_status_rbkd:
+            return False
+        fsp_status_rb = fsp_status_rbkd[key]
 
         tbl = fsp_status_rb.lgdo
         loc = fsp_status_rb.loc
@@ -773,14 +776,14 @@ class FSPEventDecoder(DataDecoder):
     def decode_packet(
         self,
         fcio: FCIO,
-        fsp_evt_rbkd: lgdo.Table | dict[int, lgdo.Table],
+        fsp_evt_rbkd: dict[int, lgdo.Table],
         packet_id: int,
     ) -> bool:
 
-        if self.key_list[0] in fsp_evt_rbkd:
-            fsp_evt_rb = fsp_evt_rbkd[self.key_list[0]]
-        else:
+        key = f"fsp_event_{get_key(fcio.config.streamid, 0, 0)}"
+        if key not in fsp_evt_rbkd:
             return False
+        fsp_evt_rb = fsp_evt_rbkd[key]
 
         tbl = fsp_evt_rb.lgdo
         loc = fsp_evt_rb.loc
