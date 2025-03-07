@@ -17,6 +17,7 @@ import line_profiler
 
 log = logging.getLogger(__name__)
 
+
 def get_key(streamid: int, card_address: int, card_input: int, iwf: int = -1) -> int:
     if streamid > 0 or iwf < 0:
         # For backwards compatibility only the lower 16-bit of the streamid are
