@@ -14,15 +14,13 @@ log = logging.getLogger(__name__)
 
 fc_event_decoded_values = copy.deepcopy(fc_eventheader_decoded_values)
 
-# The event decoding splits all array values into scalars to allow
-# decoding per key
+# The event decoding splits all arrays in the header into scalars to support decoding per key
 for key in [
     "board_id",
     "fc_input",
     "runtime",
     "lifetime",
     "deadtime",
-    "deadtime_nsec",
     "deadinterval_nsec",
     "baseline",
     "daqenergy",
@@ -32,7 +30,6 @@ for key in [
 
 # tracelist contains contains the mapping for array indices to channel indices
 fc_event_decoded_values.pop("tracelist")
-#
 fc_event_decoded_values["channel"] = {
     "dtype": "uint16",
     "description": "The index of each read out channel in this stream.",
@@ -172,6 +169,9 @@ class FCEventDecoder(DataDecoder):
             tbl["dr_stop_pps"].nda[loc] = fcio.event.deadregion[2]
             tbl["dr_stop_ticks"].nda[loc] = fcio.event.deadregion[3]
             tbl["dr_maxticks"].nda[loc] = fcio.event.deadregion[4]
+            # if event_type == 11: provides the same check
+            # however, the usage of deadregion[5]/[6] must never change
+            # and it will always be present if deadregion[7..] is ever used
             if fcio.event.deadregion_size >= 7:
                 tbl["dr_ch_idx"].nda[loc] = fcio.event.deadregion[5]
                 tbl["dr_ch_len"].nda[loc] = fcio.event.deadregion[6]
@@ -183,7 +183,6 @@ class FCEventDecoder(DataDecoder):
             tbl["timestamp"].nda[loc] = fcio.event.unix_time_utc_sec
             tbl["deadinterval_nsec"].nda[loc] = fcio.event.dead_interval_nsec[ii]
             tbl["deadtime"].nda[loc] = fcio.event.dead_time_sec[ii]
-            tbl["deadtime_nsec"].nda[loc] = fcio.event.dead_time_nsec[ii]
             tbl["lifetime"].nda[loc] = fcio.event.life_time_sec[ii]
             tbl["runtime"].nda[loc] = fcio.event.run_time_sec[ii]
             tbl["baseline"].nda[loc] = fcio.event.fpga_baseline[ii]

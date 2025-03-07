@@ -222,9 +222,6 @@ class ORFCIOStatusDecoder(OrcaDecoder):
         fcio_stream = get_fcio_stream(packet[2])
         fcio_stream.set_mem_field(memoryview(packet[3:]))
 
-        # self.decoder.set_fcio_stream(fcio_stream)
-        # self.fsp_decoder.set_fcio_stream(fcio_stream)
-
         any_full = False
         while fcio_stream.get_record():
             if fcio_stream.tag == Tags.Status:
@@ -316,7 +313,6 @@ class ORFCIOEventDecoder(OrcaDecoder):
     def set_header(self, header: OrcaHeader) -> None:
         """Setter for headers. Overload to set card parameters, etc."""
         self.header = header
-        # self.key_list = copy.deepcopy(self.decoder.get_key_lists())
         self.fc_hdr_info = extract_header_information(header)
         key_list = self.fc_hdr_info['key_list']
         for fcid in key_list:
