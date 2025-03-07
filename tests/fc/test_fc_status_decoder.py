@@ -1,4 +1,3 @@
-
 import lgdo
 import numpy as np
 import pytest
