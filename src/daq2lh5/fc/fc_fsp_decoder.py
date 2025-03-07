@@ -38,7 +38,7 @@ fsp_config_decoded_values = {
     "dsp_wps_tracemap_format" : { 'dtype' : 'int32', 'description' : ""},
     "dsp_wps_tracemap_indices" : { 'dtype' : 'int32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
     "dsp_wps_tracemap_enabled" : { 'dtype' : 'int32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
-    "dsp_wps_tracemap_label" : { 'dtype' : '|S7', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_wps_tracemap_label" : { 'dtype' : '|S7', "datatype": "array_of_equalsized_arrays<1,1>{string}", "length": Limits.MaxChannels, 'description' : ""},
     "dsp_wps_gains" : { 'dtype' : 'float32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
     "dsp_wps_thresholds" : { 'dtype' : 'float32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
     "dsp_wps_lowpass" : { 'dtype' : 'float32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
@@ -57,12 +57,12 @@ fsp_config_decoded_values = {
     "dsp_hwm_tracemap_format" : { 'dtype' : 'int32', 'description' : ""},
     "dsp_hwm_tracemap_indices" : { 'dtype' : 'int32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
     "dsp_hwm_tracemap_enabled" : { 'dtype' : 'int32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
-    "dsp_hwm_tracemap_label" : { 'dtype' : '|S7', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_hwm_tracemap_label" : { 'dtype' : '|S7', "datatype": "array_of_equalsized_arrays<1,1>{string}", "length": Limits.MaxChannels, 'description' : ""},
     "dsp_hwm_fpga_energy_threshold_adc" : { 'dtype' : 'uint16', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
     "dsp_ct_tracemap_format" : { 'dtype' : 'int32', 'description' : ""},
     "dsp_ct_tracemap_indices" : { 'dtype' : 'int32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
     "dsp_ct_tracemap_enabled" : { 'dtype' : 'int32', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
-    "dsp_ct_tracemap_label" : { 'dtype' : '|S7', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
+    "dsp_ct_tracemap_label" : { 'dtype' : '|S7', "datatype": "array_of_equalsized_arrays<1,1>{string}", "length": Limits.MaxChannels, 'description' : ""},
     "dsp_ct_thresholds" : { 'dtype' : 'uint16', "datatype": "array<1>{array<1>{real}}", "length_guess": Limits.MaxChannels, 'description' : ""},
 }
 
@@ -77,6 +77,31 @@ class FSPConfigDecoder(DataDecoder):
 
     def set_fcio_stream(self, fcio_stream: FCIO) -> None:
         self.key_list = [f"fsp_config_{get_key(fcio_stream.config.streamid, 0, 0)}"]
+        if fcio_stream.fsp is not None:
+            wps_n_traces = fcio_stream.fsp.config.wps["tracemap"]["n_mapped"]
+            hwm_n_traces = fcio_stream.fsp.config.hwm["tracemap"]["n_mapped"]
+            ct_n_traces = fcio_stream.fsp.config.ct["tracemap"]["n_mapped"]
+            self.decoded_values['dsp_wps_tracemap_label']['length'] = wps_n_traces
+            self.decoded_values['dsp_hwm_tracemap_label']['length'] = hwm_n_traces
+            self.decoded_values['dsp_ct_tracemap_label']['length'] = ct_n_traces
+
+            self.decoded_values['trg_wps_ref_map_idx']['length_guess'] = fcio_stream.fsp.config.triggerconfig["n_wps_ref_map_idx"]
+            self.decoded_values['dsp_wps_tracemap_indices']['length_guess'] = wps_n_traces
+            self.decoded_values['dsp_wps_tracemap_enabled']['length_guess'] = fcio_stream.fsp.config.wps["tracemap"]["n_enabled"]
+            self.decoded_values['dsp_wps_gains']['length_guess'] = wps_n_traces
+            self.decoded_values['dsp_wps_thresholds']['length_guess'] = wps_n_traces
+            self.decoded_values['dsp_wps_lowpass']['length_guess'] = wps_n_traces
+            self.decoded_values['dsp_wps_shaping_widths']['length_guess'] = wps_n_traces
+            self.decoded_values['dsp_wps_margin_front']['length_guess'] = wps_n_traces
+            self.decoded_values['dsp_wps_margin_back']['length_guess'] = wps_n_traces
+            self.decoded_values['dsp_wps_start_sample']['length_guess'] = wps_n_traces
+            self.decoded_values['dsp_wps_stop_sample']['length_guess'] = wps_n_traces
+            self.decoded_values['dsp_hwm_tracemap_indices']['length_guess'] = hwm_n_traces
+            self.decoded_values['dsp_hwm_tracemap_enabled']['length_guess'] = fcio_stream.fsp.config.hwm["tracemap"]["n_enabled"]
+            self.decoded_values['dsp_hwm_fpga_energy_threshold_adc']['length_guess'] = hwm_n_traces
+            self.decoded_values['dsp_ct_tracemap_indices']['length_guess'] = ct_n_traces
+            self.decoded_values['dsp_ct_tracemap_enabled']['length_guess'] = fcio_stream.fsp.config.ct["tracemap"]["n_enabled"]
+            self.decoded_values['dsp_ct_thresholds']['length_guess'] = ct_n_traces
 
     def get_decoded_values(self, key: int = None) -> dict[str, dict[str, Any]]:
         return self.decoded_values
@@ -142,7 +167,9 @@ class FSPConfigDecoder(DataDecoder):
         tbl["dsp_wps_tracemap_enabled"]._set_vector_unsafe(loc, np.array(wps["tracemap"]["enabled"], dtype="int32")[
             : wps["tracemap"]["n_enabled"]
         ])
-        tbl["dsp_wps_tracemap_label"]._set_vector_unsafe(loc,np.array(wps["tracemap"]["label"], dtype="|S7")[:wps_n_traces])
+
+        tbl["dsp_wps_tracemap_label"].nda[loc][:] = np.array(wps["tracemap"]["label"], dtype="|S7")
+
         tbl["dsp_wps_gains"]._set_vector_unsafe(loc,np.array(wps["gains"], dtype="float32")[:wps_n_traces])
         tbl["dsp_wps_thresholds"]._set_vector_unsafe(loc,np.array(wps["thresholds"], dtype="float32")[:wps_n_traces])
         tbl["dsp_wps_lowpass"]._set_vector_unsafe(loc,np.array(wps["lowpass"], dtype="float32")[:wps_n_traces])
@@ -163,7 +190,9 @@ class FSPConfigDecoder(DataDecoder):
         tbl["dsp_hwm_tracemap_enabled"]._set_vector_unsafe(loc, np.array(hwm["tracemap"]["enabled"], dtype="int32")[
             : hwm["tracemap"]["n_enabled"]
         ])
-        tbl["dsp_hwm_tracemap_label"]._set_vector_unsafe(loc,  np.array(hwm["tracemap"]["label"], dtype="|S7")[:hwm_n_traces])
+
+        tbl["dsp_hwm_tracemap_label"].nda[loc][:] = np.array(hwm["tracemap"]["label"], dtype="|S7")
+
         tbl["dsp_hwm_fpga_energy_threshold_adc"]._set_vector_unsafe(loc, np.array(hwm["fpga_energy_threshold_adc"], dtype="uint16")[
             :hwm_n_traces
         ])
@@ -172,7 +201,9 @@ class FSPConfigDecoder(DataDecoder):
         tbl["dsp_ct_tracemap_enabled"]._set_vector_unsafe(loc, np.array(ct["tracemap"]["enabled"], dtype="int32")[
             : ct["tracemap"]["n_enabled"]
         ])
-        tbl["dsp_ct_tracemap_label"]._set_vector_unsafe(loc, np.array(ct["tracemap"]["label"], dtype="|S7")[:ct_n_traces])
+
+        tbl["dsp_ct_tracemap_label"].nda[loc][:] = np.array(ct["tracemap"]["label"], dtype="|S7")
+
         tbl["dsp_ct_thresholds"]._set_vector_unsafe(loc, np.array(ct["thresholds"], dtype="uint16")[:ct_n_traces])
 
         fsp_config_rb.loc += 1
