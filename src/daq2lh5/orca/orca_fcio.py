@@ -179,8 +179,7 @@ class ORFCIOStatusDecoder(OrcaDecoder):
 
         for fcid in self.fc_hdr_info['n_card']:
             # If the data was taken without a master distribution module,
-            # i.e. only one ADC Module the decoder will just not write to the
-            # Buffer.
+            # i.e. only one ADC Module the decoder will just not write to the buffer.
 
             # MDB key
             self.key_list['fc_status'] = [get_status_key(fcid, 0)]
