@@ -132,8 +132,10 @@ class FCEventDecoder(DataDecoder):
         any_full = False
 
         # a list of channels is read out simultaneously for each event
-        for ii, trace_idx in enumerate(fcio.event.trace_list):
-            key = self.key_list[trace_idx]
+        for ii, (trace_idx, addr, chan) in enumerate(
+            zip(fcio.event.trace_list, fcio.event.card_address, fcio.event.card_channel)
+        ):
+            key = get_key(fcio.config.streamid, addr, chan)
             if key not in evt_rbkd:
                 if key not in self.skipped_channels:
                     # TODO: should this be a warning instead?
