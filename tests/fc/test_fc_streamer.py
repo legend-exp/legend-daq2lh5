@@ -31,7 +31,7 @@ def test_default_rb_lib(lgnd_test_data):
     assert rb_lib["FCStatusDecoder"][0].out_name == "FCStatus"
     assert rb_lib["FCStatusDecoder"][0].key_list == [0, 8192]
     assert rb_lib["FCEventDecoder"][0].out_name == "FCEvent"
-    assert rb_lib["FCEventDecoder"][0].key_list == [ 52800 + _ for _ in range(0, 6) ]
+    assert rb_lib["FCEventDecoder"][0].key_list == [52800 + _ for _ in range(0, 6)]
     assert rb_lib["FCEventHeaderDecoder"][0].out_name == "FCEventHeader"
     assert rb_lib["FSPConfigDecoder"][0].out_name == "FSPConfig"
     assert rb_lib["FSPEventDecoder"][0].out_name == "FSPEvent"
@@ -47,8 +47,8 @@ def test_open_stream(lgnd_test_data):
     assert streamer.fcio is not None  # fcio object is instantiated
     assert streamer.packet_id == 0  # packet id is initialized
     assert streamer.n_bytes_read == 180  # fc header is read,
-                                         # includes the stream identifier, and config records
-                                         # depends on the file
+    # includes the stream identifier, and config records
+    # depends on the file
     assert streamer.event_rbkd is not None  # dict containing event info is initialized
 
 

@@ -29,5 +29,8 @@ def test_values(fcio_config):
         assert fcio_config[k].value == v
 
     assert np.array_equal(
-        fcio_config["tracemap"].nda, np.array([34603008,34603009,34603010,34603011,34603012,34603013], dtype='uint32')
+        fcio_config["tracemap"].nda,
+        np.array(
+            [34603008, 34603009, 34603010, 34603011, 34603012, 34603013], dtype="uint32"
+        ),
     )

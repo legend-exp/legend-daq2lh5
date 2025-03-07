@@ -4,16 +4,11 @@ import copy
 import logging
 from typing import Any
 
-from daq2lh5.raw_buffer import RawBuffer, RawBufferList
-from fcio import FCIO, Tags, Limits
 import lgdo
+from fcio import FCIO, Limits
 
-from lgdo.types import vovutils
-import numpy as np
 
 from ..data_decoder import DataDecoder
-
-import line_profiler
 
 log = logging.getLogger(__name__)
 

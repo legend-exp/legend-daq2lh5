@@ -76,13 +76,15 @@ def test_invalid_user_buffer_size(lgnd_test_data, tmptestdir):
 def test_build_raw_fc_out_spec(lgnd_test_data, tmptestdir):
     out_file = f"{tmptestdir}/L200-comm-20211130-phy-spms.lh5"
     out_spec = {
-        "FCEventDecoder": {"spms": {"key_list": [[52802, 52804]], "out_stream": out_file}}
+        "FCEventDecoder": {
+            "spms": {"key_list": [[52802, 52804]], "out_stream": out_file}
+        }
     }
 
     build_raw(
         in_stream=lgnd_test_data.get_path("fcio/L200-comm-20211130-phy-spms.fcio"),
         out_spec=out_spec,
-        n_max=10 * 3, # decode 10 events of 3 channels per record into one table
+        n_max=10 * 3,  # decode 10 events of 3 channels per record into one table
         overwrite=True,
     )
 
@@ -111,7 +113,7 @@ def test_build_raw_fc_channelwise_out_spec(lgnd_test_data, tmptestdir):
     out_spec = {
         "FCEventDecoder": {
             "ch{key}": {
-                "key_list": [[52800, 52806 ]],
+                "key_list": [[52800, 52806]],
                 "out_stream": out_file + ":{name}",
                 "out_name": "raw",
             }
@@ -124,7 +126,14 @@ def test_build_raw_fc_channelwise_out_spec(lgnd_test_data, tmptestdir):
         overwrite=True,
     )
 
-    assert lh5.ls(out_file) == ["ch52800", "ch52801", "ch52802", "ch52803", "ch52804", "ch52805"]
+    assert lh5.ls(out_file) == [
+        "ch52800",
+        "ch52801",
+        "ch52802",
+        "ch52803",
+        "ch52804",
+        "ch52805",
+    ]
     assert lh5.ls(out_file, "ch52800/") == ["ch52800/raw"]
     assert lh5.ls(out_file, "ch52800/raw/waveform") == ["ch52800/raw/waveform"]
 
@@ -220,7 +229,9 @@ def test_build_raw_hdf5_settings_in_decoded_values(lgnd_test_data, tmptestdir):
 def test_build_raw_wf_compression_in_decoded_values(lgnd_test_data, tmptestdir):
     out_file = lgnd_test_data.get_path("orca/fc/L200-comm-20220519-phy-geds.lh5")
 
-    fc_event_decoded_values["waveform"].setdefault("hdf5_settings", {"values": {}, "t0": {}})
+    fc_event_decoded_values["waveform"].setdefault(
+        "hdf5_settings", {"values": {}, "t0": {}}
+    )
     fc_event_decoded_values["waveform"]["hdf5_settings"] = {
         "values": {"shuffle": False, "compression": "lzf"},
         "t0": {"shuffle": True, "compression": None},
