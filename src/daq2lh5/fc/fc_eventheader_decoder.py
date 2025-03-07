@@ -154,23 +154,23 @@ fc_eventheader_decoded_values = {
     },
     "dr_start_pps": {
         "dtype": "int32",
-        "description": "The PPS counter value when the hardware buffers were full (dead), before this event. Only changes if a new value is aquired.",
+        "description": "The PPS counter value when the hardware buffers were full (dead), before this event. Only changes if a new value is acquired.",
     },
     "dr_start_ticks": {
         "dtype": "int32",
-        "description": "The ticks counter value when the hardware buffers were full (dead), before this event. Only changes if a new value is aquired.",
+        "description": "The ticks counter value when the hardware buffers were full (dead), before this event. Only changes if a new value is acquired.",
     },
     "dr_stop_pps": {
         "dtype": "int32",
-        "description": "The PPS counter value when the hardware buffers free (life) again, before this event. Only changes if a new value is aquired.",
+        "description": "The PPS counter value when the hardware buffers are free (life) again, before this event. Only changes if a new value is acquired.",
     },
     "dr_stop_ticks": {
         "dtype": "int32",
-        "description": "The ticks counter value when the hardware buffers free (life) again, before this event. Only changes if a new value is aquired.",
+        "description": "The ticks counter value when the hardware buffers are free (life) again, before this event. Only changes if a new value is acquired.",
     },
     "dr_maxticks": {
         "dtype": "int32",
-        "description": "The ticks counter value on PPS when the hardware buffers were freed, before this event. Only changes if a new value is aquired.",
+        "description": "The ticks counter value on PPS when the hardware buffers were freed, before this event. Only changes if a new value is acquired.",
     },
     "dr_ch_idx": {
         "dtype": "uint16",
