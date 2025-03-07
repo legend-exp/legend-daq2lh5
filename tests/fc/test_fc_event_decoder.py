@@ -75,7 +75,11 @@ def test_data_types(event_rbkd):
 def test_values(event_rbkd, fcio_obj):
     fc = fcio_obj
     for ii, ch in enumerate(fc.event.trace_list):
-        key = get_key(fc.config.streamid, fc.config.tracemap[ch] >> 16, fc.config.tracemap[ch] & 0xFFFF)
+        key = get_key(
+            fc.config.streamid,
+            fc.config.tracemap[ch] >> 16,
+            fc.config.tracemap[ch] & 0xFFFF,
+        )
         loc = event_rbkd[key].loc - 1
         tbl = event_rbkd[key].lgdo
 

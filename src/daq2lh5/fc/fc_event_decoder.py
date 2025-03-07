@@ -4,8 +4,8 @@ import copy
 import logging
 from typing import Any
 
-from fcio import FCIO, Tags, Limits
 import lgdo
+from fcio import FCIO, Limits
 
 from ..data_decoder import DataDecoder
 from .fc_eventheader_decoder import fc_eventheader_decoded_values, get_key

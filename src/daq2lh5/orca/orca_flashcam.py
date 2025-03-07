@@ -737,7 +737,9 @@ class ORFlashCamWaveformDecoder(OrcaDecoder):
         tbl["waveform"]["values"].nda[ii][:wf_samples] = wf
 
         evt_rbkd[key].loc += 1
-        print(f"-> {tbl["eventnumber"].nda[ii]} {channel} .. {evt_rbkd[key].loc}/{len(evt_rbkd[key])} {id(evt_rbkd[key])} {id(evt_rbkd[key].lgdo)}")
+        print(
+            f"-> {tbl["eventnumber"].nda[ii]} {channel} .. {evt_rbkd[key].loc}/{len(evt_rbkd[key])} {id(evt_rbkd[key])} {id(evt_rbkd[key].lgdo)}"
+        )
         return evt_rbkd[key].is_full()
 
 

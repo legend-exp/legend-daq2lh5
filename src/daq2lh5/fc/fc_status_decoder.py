@@ -3,11 +3,10 @@ from __future__ import annotations
 import copy
 import logging
 
-from fcio import FCIO
 import lgdo
+from fcio import FCIO
 
 from ..data_decoder import DataDecoder
-from ..raw_buffer import RawBuffer
 
 log = logging.getLogger(__name__)
 

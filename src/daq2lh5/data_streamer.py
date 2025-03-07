@@ -129,8 +129,8 @@ class DataStreamer(ABC):
 
             # Parse wildcard keys in RawBuffers and replace with known keys of the decoder.
             dec_key_list = sum(decoder.get_key_lists(), [])
-            dec_key_type = type(dec_key_list[0]) # requires consistent types
-            dec_key_list = set(map(str,dec_key_list))
+            dec_key_type = type(dec_key_list[0])  # requires consistent types
+            dec_key_list = set(map(str, dec_key_list))
 
             log.debug(f"{dec_name} offers keys {dec_key_list}")
 
@@ -148,7 +148,9 @@ class DataStreamer(ABC):
                         if only_wildcard_rb is None:
                             only_wildcard_rb = rb
                         else:
-                            raise KeyError(f"Only one '*' wildcard key allowed for decoder {dec_name}")
+                            raise KeyError(
+                                f"Only one '*' wildcard key allowed for decoder {dec_name}"
+                            )
 
                     elif "*" in key:
                         wildcard_rbs.append(rb)
@@ -176,7 +178,7 @@ class DataStreamer(ABC):
                 # Expect anything that can be cast to int wants to be cast
                 rb.key_list = []
                 for key in matched_keys:
-                    if key == 'None':
+                    if key == "None":
                         rb.key_list.append(None)
                     try:
                         new_key = int(key)
@@ -184,10 +186,13 @@ class DataStreamer(ABC):
                     except ValueError:
                         rb.key_list.append(key)
 
-
                 if len(rb.key_list) == 0:
-                    log.warning(f"no matched keys for key_list {rb.key_list} in {dec_name}.{rb.out_name}")
-                log.debug(f"{dec_name}:{rb.out_stream}/{rb.out_name} matched wildcards to {rb.key_list}")
+                    log.warning(
+                        f"no matched keys for key_list {rb.key_list} in {dec_name}.{rb.out_name}"
+                    )
+                log.debug(
+                    f"{dec_name}:{rb.out_stream}/{rb.out_name} matched wildcards to {rb.key_list}"
+                )
 
             keyed_name_rbs = []
             ii = 0

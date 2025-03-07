@@ -3,16 +3,16 @@ from __future__ import annotations
 import logging
 
 import lgdo
+from fcio import FCIO, Tags
 
-from fcio import FCIO, Tags, Limits
 from ..data_decoder import DataDecoder
 from ..data_streamer import DataStreamer
 from ..raw_buffer import RawBuffer, RawBufferLibrary
 from .fc_config_decoder import FCConfigDecoder
 from .fc_event_decoder import FCEventDecoder
 from .fc_eventheader_decoder import FCEventHeaderDecoder
-from .fc_status_decoder import FCStatusDecoder
 from .fc_fsp_decoder import FSPConfigDecoder, FSPEventDecoder, FSPStatusDecoder
+from .fc_status_decoder import FCStatusDecoder
 
 log = logging.getLogger(__name__)
 

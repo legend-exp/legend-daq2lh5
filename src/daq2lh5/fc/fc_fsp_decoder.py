@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import copy
-import logging
-import numpy as np
 from typing import Any
 
-from daq2lh5.raw_buffer import RawBufferList
-from fcio import FCIO, Limits
 import lgdo
+import numpy as np
+from fcio import FCIO, Limits
 
-from .fc_eventheader_decoder import get_key
 
 from ..data_decoder import DataDecoder
+from .fc_eventheader_decoder import get_key
 
 fsp_config_decoded_values = {
     "packet_id": {

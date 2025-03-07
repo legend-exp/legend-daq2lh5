@@ -58,9 +58,13 @@ class OrcaStreamer(DataStreamer):
         if n_bytes_read == 0:  # EOF
             return None
         if (n_bytes_read % 4) != 0:
-            raise RuntimeError(f"got {n_bytes_read} bytes for packet header, expect 4 or 8.")
+            raise RuntimeError(
+                f"got {n_bytes_read} bytes for packet header, expect 4 or 8."
+            )
         if orca_packet.is_extended(pkt_hdr) and n_bytes_read < 8:
-            raise RuntimeError(f"got {n_bytes_read} bytes for packet header, but require 8 for the extended header format.")
+            raise RuntimeError(
+                f"got {n_bytes_read} bytes for packet header, but require 8 for the extended header format."
+            )
         if orca_packet.is_short(pkt_hdr) and n_bytes_read > 4:
             # if more than 4 bytes were read but the packet is short, we reset the file stream
             # so we can read the next uint32_t again. would not be necessary with a circular buffer
@@ -102,7 +106,9 @@ class OrcaStreamer(DataStreamer):
             pkt_hdr = self.load_packet_header()
             if pkt_hdr is None:
                 return False
-            self.in_stream.seek((orca_packet.get_n_words(pkt_hdr) - len(pkt_hdr)) * 4, 1)
+            self.in_stream.seek(
+                (orca_packet.get_n_words(pkt_hdr) - len(pkt_hdr)) * 4, 1
+            )
             n -= 1
         return True
 
@@ -195,7 +201,7 @@ class OrcaStreamer(DataStreamer):
         # load into buffer, resizing as necessary
         if len(self.buffer) < n_words:
             self.buffer.resize(n_words, refcheck=False)
-        n_bytes_read = self.in_stream.readinto(self.buffer[len(pkt_hdr):n_words])
+        n_bytes_read = self.in_stream.readinto(self.buffer[len(pkt_hdr) : n_words])
         self.n_bytes_read += n_bytes_read
         if n_bytes_read != (n_words - len(pkt_hdr)) * 4:
             log.error(

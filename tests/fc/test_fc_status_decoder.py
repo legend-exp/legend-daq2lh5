@@ -1,9 +1,8 @@
-from multiprocessing.dummy import Array
 
 import lgdo
-from fcio import Tags as FCIOTag
 import numpy as np
 import pytest
+from fcio import Tags as FCIOTag
 from pytest import approx
 
 from daq2lh5.fc.fc_status_decoder import FCStatusDecoder, get_key
@@ -16,7 +15,7 @@ def status_rbkd(fcio_obj):
     decoder.set_fcio_stream(fcio_obj)
 
     # get first FCIOStatus record
-    nrecords = 1 # first FCIOConfig is decoded automatically
+    nrecords = 1  # first FCIOConfig is decoded automatically
     while fcio_obj.get_record():
         nrecords += 1
         if fcio_obj.tag == FCIOTag.Status:
@@ -74,6 +73,7 @@ def test_data_types(status_rbkd):
         assert isinstance(tbl["cti_links"], lgdo.VectorOfVectors)
         assert isinstance(tbl["link_states"], lgdo.VectorOfVectors)
 
+
 def test_values(status_rbkd, fcio_obj):
     for card_data in fcio_obj.status.data:
         key = get_key(fcio_obj.config.streamid, card_data.reqid)
@@ -86,7 +86,9 @@ def test_values(status_rbkd, fcio_obj):
         assert tbl["status"].nda[loc] == fcio_obj.status.status
         assert tbl["fpga_time"].nda[loc] == approx(fcio_obj.status.fpga_time_sec)
         assert tbl["server_time"].nda[loc] == approx(fcio_obj.status.unix_time_utc_sec)
-        assert tbl["fpga_start_time"].nda[loc] == approx(fcio_obj.status.fpga_start_time_sec)
+        assert tbl["fpga_start_time"].nda[loc] == approx(
+            fcio_obj.status.fpga_start_time_sec
+        )
 
         # per card information
         assert tbl["id"].nda[loc] == card_data.reqid
@@ -96,8 +98,12 @@ def test_values(status_rbkd, fcio_obj):
         assert tbl["n_environment_errors"].nda[loc] == card_data.enverrors
         assert tbl["n_cti_errors"].nda[loc] == card_data.ctierrors
         assert np.array_equal(tbl["n_other_errors"].nda[loc], card_data.othererrors)
-        assert np.array_equal(tbl["mb_temps"].nda[loc], card_data.mainboard_temperatures_mC)
-        assert np.array_equal(tbl["mb_voltages"].nda[loc], card_data.mainboard_voltages_mV)
+        assert np.array_equal(
+            tbl["mb_temps"].nda[loc], card_data.mainboard_temperatures_mC
+        )
+        assert np.array_equal(
+            tbl["mb_voltages"].nda[loc], card_data.mainboard_voltages_mV
+        )
         assert tbl["mb_current"].nda[loc] == card_data.mainboard_current_mA
         assert tbl["mb_humidity"].nda[loc] == card_data.mainboard_humiditiy_permille
 
@@ -105,7 +111,8 @@ def test_values(status_rbkd, fcio_obj):
         start = 0 if loc == 0 else tbl["adc_temps"].cumulative_length.nda[loc - 1]
         stop = start + len(card_data.daughterboard_temperatures_mC)
         assert np.array_equal(
-            tbl["adc_temps"].flattened_data.nda[start:stop], card_data.daughterboard_temperatures_mC
+            tbl["adc_temps"].flattened_data.nda[start:stop],
+            card_data.daughterboard_temperatures_mC,
         )
 
         start = 0 if loc == 0 else tbl["ct_links"].cumulative_length.nda[loc - 1]

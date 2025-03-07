@@ -3,11 +3,10 @@ from __future__ import annotations
 import copy
 import logging
 
-from fcio import FCIO, Limits
 import lgdo
 import numpy as np
+from fcio import FCIO, Limits
 
-from daq2lh5.raw_buffer import RawBufferList
 
 from ..data_decoder import DataDecoder
 
