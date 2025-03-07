@@ -92,13 +92,6 @@ fc_eventheader_decoded_values = {
         "units": "s",
         "description": "The accumulated time for which the hardware buffers were full (dead). Recorded per channel.",
     },
-    "deadtime_nsec": {
-        "dtype": "int64",
-        "datatype": "array<1>{array<1>{real}}",
-        "length_guess": Limits.MaxChannels,
-        "units": "ns",
-        "description": "Same as the deadtime field, but recorded in nanoseconds with 4ns precision (due to the internal clock speed of 250MHz).",
-    },
     "deadinterval_nsec": {
         "dtype": "int64",
         "datatype": "array<1>{array<1>{real}}",
