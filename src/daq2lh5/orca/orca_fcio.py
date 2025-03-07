@@ -27,8 +27,7 @@ import lgdo
 log = logging.getLogger(__name__)
 
 
-# using multiple decoders for the FCIO stream
-# requires storing the FCIO object (and it's state) globally
+# FCIO streams are stateful and need to be accessible for all decoders.
 fcio_stream_library = dict()
 
 def get_fcio_stream(streamid):
@@ -41,11 +40,11 @@ def get_fcio_stream(streamid):
 def extract_header_information(header: OrcaHeader):
 
     fc_hdr_info = {
-      "key_list" : {}, # access by fcid
+      "key_list" : {},
       "n_adc" : {},
-      "adc_card_layout" : {}, # [fcid][key] = (crate, card, cardaddress)
-      "wf_len" : {}, # [fcid] = wf_len
-      "fsp_enabled": {}, # [fcid]
+      "adc_card_layout" : {},
+      "wf_len" : {},
+      "fsp_enabled": {},
       "n_card" : {},
     }
 
@@ -140,8 +139,7 @@ class ORFCIOConfigDecoder(OrcaDecoder):
 
         fcio_stream = get_fcio_stream(packet[2])
         if fcio_stream.is_open():
-            log.warning(f"FCIO stream with stream id {packet[2]} already opened. Continue with updated FCIOConfig.")
-            fcio_stream.set_mem_field(memoryview(packet[3:]))
+            raise NotImplementedError(f"FCIO stream with stream id {packet[2]} already opened. Update of FCIOConfig is not supported.")
         else:
             fcio_stream.open(memoryview(packet[3:]))
 
@@ -150,7 +148,7 @@ class ORFCIOConfigDecoder(OrcaDecoder):
 
         config_rbkd = rbl.get_keyed_dict()
 
-        # TODO instead of preselecting the rbkd with the key here, let the decoder do it
+        # TODO: the decoders could fetch lgdo's using it's key_list
         fc_key = get_key(fcio_stream.config.streamid, 0, 0)
         any_full = self.decoder.decode_packet(fcio_stream, config_rbkd[fc_key], packet_id)
         if self.fsp_decoder is not None:
@@ -180,11 +178,15 @@ class ORFCIOStatusDecoder(OrcaDecoder):
         self.decoded_values = copy.deepcopy(self.decoder.get_decoded_values())
 
         for fcid in self.fc_hdr_info['n_card']:
-            # We expect there always to be a master distribution module
-            # If it's not there, the rb for this key will never be filled
-            # and not appear in the lh5 file.
+            # If the data was taken without a master distribution module,
+            # i.e. only one ADC Module the decoder will just not write to the
+            # Buffer.
+
+            # MDB key
             self.key_list['fc_status'] = [get_status_key(fcid, 0)]
+            # ADC module keys
             self.key_list['fc_status'] += [get_status_key(fcid, 0x2000 + i) for i in range(self.fc_hdr_info['n_card'][fcid])]
+
             if self.fc_hdr_info["fsp_enabled"][fcid]:
                 key = get_key(fcid, 0, 0)
                 self.key_list['fsp_status'].append(f"fsp_status_{key}")
@@ -220,8 +222,8 @@ class ORFCIOStatusDecoder(OrcaDecoder):
         fcio_stream = get_fcio_stream(packet[2])
         fcio_stream.set_mem_field(memoryview(packet[3:]))
 
-        self.decoder.set_fcio_stream(fcio_stream)
-        self.fsp_decoder.set_fcio_stream(fcio_stream)
+        # self.decoder.set_fcio_stream(fcio_stream)
+        # self.fsp_decoder.set_fcio_stream(fcio_stream)
 
         any_full = False
         while fcio_stream.get_record():
@@ -283,9 +285,6 @@ class ORFCIOEventHeaderDecoder(OrcaDecoder):
         evthdr_rbkd = rbl.get_keyed_dict()
         fcio_stream = get_fcio_stream(packet[2])
         fcio_stream.set_mem_field(memoryview(packet[3:]))
-        self.decoder.set_fcio_stream(fcio_stream)
-        if self.fsp_decoder is not None:
-            self.fsp_decoder.set_fcio_stream(fcio_stream)
 
         any_full = False
         while fcio_stream.get_record():
@@ -360,9 +359,6 @@ class ORFCIOEventDecoder(OrcaDecoder):
 
         fcio_stream = get_fcio_stream(packet[2])
         fcio_stream.set_mem_field(memoryview(packet[3:]))
-
-        self.decoder.set_fcio_stream(fcio_stream)
-        self.fsp_decoder.set_fcio_stream(fcio_stream)
 
         any_full = False
         while fcio_stream.get_record():
