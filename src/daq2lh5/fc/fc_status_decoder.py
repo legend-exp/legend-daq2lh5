@@ -102,7 +102,7 @@ fc_status_decoded_values = {
         "dtype": "int32",
         "units": "mC",
         "datatype": "array<1>{array<1>{real}}",
-        "length_guess": 2,  # max number of daugher cards - only for adc cards
+        "length_guess": 2,  # max number of daughter cards - only for adc cards
         "description": "If the card has adc daughter (piggy) boards mounted, each daughter has a temperature sensor.",
     },
     "cti_links": {

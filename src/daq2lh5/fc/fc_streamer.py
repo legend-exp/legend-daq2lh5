@@ -197,7 +197,7 @@ class FCStreamer(DataStreamer):
         # FCIOConfigs contains header data (lengths) required to access
         # (Sparse)Event(Header) records.
         # The protocol allows updates of these settings within a datastream.
-        # Concatening of FCIO streams is supported here only if the FCIOConfig
+        # Concatenating of FCIO streams is supported here only if the FCIOConfig
         # is the same.
         if self.fcio.tag == Tags.Config or self.fcio.tag == Tags.FSPConfig:
             log.warning(
