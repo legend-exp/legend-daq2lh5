@@ -14,28 +14,35 @@ from ..data_decoder import DataDecoder
 log = logging.getLogger(__name__)
 
 fc_config_decoded_values = {
-  "packet_id": {
-      "dtype": "uint32",
-      "description": "The index of this decoded packet in the file.",
-  },
-  "nsamples" :  {"dtype": "int32", "description" : "samples per channel"},
-  "nadcs" :  {"dtype": "int32", "description" : "number of adc channels"},
-  "ntriggers" :  {"dtype": "int32", "description" : "number of triggertraces"},
-  "streamid" :  {"dtype": "int32", "description" : "id of stream"},
-  "adcbits" :  {"dtype": "int32", "description" : "bit range of the adc channels"},
-  "sumlength" :  {"dtype": "int32", "description" : "length of the fpga integrator"},
-  "blprecision" :  {"dtype": "int32", "description" : "precision of the fpga baseline"},
-  "mastercards" :  {"dtype": "int32", "description" : "number of attached mastercards"},
-  "triggercards" :  {"dtype": "int32", "description" : "number of attached triggercards"},
-  "adccards" :  {"dtype": "int32", "description" : "number of attached fadccards"},
-  "gps" :  {"dtype": "int32", "description" : "gps mode (0: not used, >0: external pps and 10MHz)"},
-  "tracemap": {
-      "dtype": "uint32",
-      "datatype": "array<1>{array<1>{real}}",
-      "length": Limits.MaxChannels,
-      "description" : ""
-  },
+    "packet_id": {
+        "dtype": "uint32",
+        "description": "The index of this decoded packet in the file.",
+    },
+    "nsamples": {"dtype": "int32", "description": "samples per channel"},
+    "nadcs": {"dtype": "int32", "description": "number of adc channels"},
+    "ntriggers": {"dtype": "int32", "description": "number of triggertraces"},
+    "streamid": {"dtype": "int32", "description": "id of stream"},
+    "adcbits": {"dtype": "int32", "description": "bit range of the adc channels"},
+    "sumlength": {"dtype": "int32", "description": "length of the fpga integrator"},
+    "blprecision": {"dtype": "int32", "description": "precision of the fpga baseline"},
+    "mastercards": {"dtype": "int32", "description": "number of attached mastercards"},
+    "triggercards": {
+        "dtype": "int32",
+        "description": "number of attached triggercards",
+    },
+    "adccards": {"dtype": "int32", "description": "number of attached fadccards"},
+    "gps": {
+        "dtype": "int32",
+        "description": "gps mode (0: not used, >0: external pps and 10MHz)",
+    },
+    "tracemap": {
+        "dtype": "uint32",
+        "datatype": "array<1>{array<1>{real}}",
+        "length": Limits.MaxChannels,
+        "description": "",
+    },
 }
+
 
 class FCConfigDecoder(DataDecoder):
     """Decode FlashCam config data.
@@ -73,19 +80,19 @@ class FCConfigDecoder(DataDecoder):
 
         tbl["packet_id"].nda[loc] = packet_id
 
-        tbl['nsamples'].nda[loc] = fcio.config.eventsamples
-        tbl['nadcs'].nda[loc] = fcio.config.adcs
-        tbl['ntriggers'].nda[loc] = fcio.config.triggers
-        tbl['streamid'].nda[loc] = fcio.config.streamid
-        tbl['adcbits'].nda[loc] = fcio.config.adcbits
-        tbl['sumlength'].nda[loc] = fcio.config.sumlength
-        tbl['blprecision'].nda[loc] = fcio.config.blprecision
-        tbl['mastercards'].nda[loc] = fcio.config.mastercards
-        tbl['triggercards'].nda[loc] = fcio.config.triggercards
-        tbl['adccards'].nda[loc] = fcio.config.adccards
-        tbl['gps'].nda[loc] = fcio.config.gps
+        tbl["nsamples"].nda[loc] = fcio.config.eventsamples
+        tbl["nadcs"].nda[loc] = fcio.config.adcs
+        tbl["ntriggers"].nda[loc] = fcio.config.triggers
+        tbl["streamid"].nda[loc] = fcio.config.streamid
+        tbl["adcbits"].nda[loc] = fcio.config.adcbits
+        tbl["sumlength"].nda[loc] = fcio.config.sumlength
+        tbl["blprecision"].nda[loc] = fcio.config.blprecision
+        tbl["mastercards"].nda[loc] = fcio.config.mastercards
+        tbl["triggercards"].nda[loc] = fcio.config.triggercards
+        tbl["adccards"].nda[loc] = fcio.config.adccards
+        tbl["gps"].nda[loc] = fcio.config.gps
         ntraces = fcio.config.adcs + fcio.config.triggers
-        tbl['tracemap']._set_vector_unsafe(loc, fcio.config.tracemap[:ntraces])
+        tbl["tracemap"]._set_vector_unsafe(loc, fcio.config.tracemap[:ntraces])
 
         config_rb.loc += 1
 
@@ -96,17 +103,17 @@ class FCConfigDecoder(DataDecoder):
         tbl = lgdo.Struct()
 
         fcio_attr_names_map = {
-            "nsamples" : "eventsamples",
-            "nadcs" : "adcs",
-            "ntriggers" : "triggers",
-            "streamid" : "streamid",
-            "adcbits" : "adcbits",
-            "sumlength" : "sumlength",
-            "blprecision" : "blprecision",
-            "mastercards" : "mastercards",
-            "triggercards" : "triggercards",
-            "adccards" : "adccards",
-            "gps" : "gps",
+            "nsamples": "eventsamples",
+            "nadcs": "adcs",
+            "ntriggers": "triggers",
+            "streamid": "streamid",
+            "adcbits": "adcbits",
+            "sumlength": "sumlength",
+            "blprecision": "blprecision",
+            "mastercards": "mastercards",
+            "triggercards": "triggercards",
+            "adccards": "adccards",
+            "gps": "gps",
         }
 
         for name, fcio_attr_name in fcio_attr_names_map.items():
