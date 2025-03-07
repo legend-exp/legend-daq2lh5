@@ -48,7 +48,6 @@ def test_data_types(event_rbkd):
         assert isinstance(tbl["lifetime"], lgdo.Array)
         assert isinstance(tbl["deadtime"], lgdo.Array)
         assert isinstance(tbl["numtraces"], lgdo.Array)
-        # assert isinstance(tbl["tracelist"], lgdo.VectorOfVectors)
         assert isinstance(tbl["baseline"], lgdo.Array)
         assert isinstance(tbl["daqenergy"], lgdo.Array)
         assert isinstance(tbl["channel"], lgdo.Array)
@@ -67,7 +66,6 @@ def test_data_types(event_rbkd):
         assert isinstance(tbl["dr_stop_pps"], lgdo.Array)
         assert isinstance(tbl["dr_stop_ticks"], lgdo.Array)
         assert isinstance(tbl["dr_maxticks"], lgdo.Array)
-        # assert isinstance(tbl["deadtime_nsec"], lgdo.Array)
         assert isinstance(tbl["waveform"], lgdo.Struct)
         assert isinstance(tbl["waveform"]["t0"], lgdo.Array)
         assert isinstance(tbl["waveform"]["dt"], lgdo.Array)
@@ -90,14 +88,6 @@ def test_values(event_rbkd, fcio_obj):
         assert tbl["lifetime"].nda[loc] == fc.event.life_time_sec[ii]
         assert tbl["deadtime"].nda[loc] == fc.event.dead_time_sec[ii]
         assert tbl["numtraces"].nda[loc] == fc.event.num_traces
-
-        # custom logic for VectorOfVectors
-        # start = 0 if loc == 0 else tbl["tracelist"].cumulative_length.nda[loc - 1]
-        # stop = start + len(fc.event.trace_list)
-        # assert np.array_equal(
-        #     tbl["tracelist"].flattened_data.nda[start:stop], fc.event.trace_list
-        # )
-
         assert tbl["baseline"].nda[loc], fc.event.fpga_baseline[ii]
         assert tbl["daqenergy"].nda[loc], fc.event.fpga_energy[ii]
         assert tbl["channel"].nda[loc] == ch
