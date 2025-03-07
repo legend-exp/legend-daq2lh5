@@ -119,7 +119,3 @@ def test_values(status_rbkd, fcio_obj):
         assert np.array_equal(
             tbl["link_states"].flattened_data.nda[start:stop], card_data.linkstates
         )
-
-        # assert np.array_equal(tbl["adc_temps"].nda[loc], card_data.daughterboard_temperatures_mC)
-        # assert np.array_equal(tbl["cti_links"].nda[loc], card_data.ctilinks)
-        # assert np.array_equal(tbl["link_states"].nda[loc], card_data.linkstates)
