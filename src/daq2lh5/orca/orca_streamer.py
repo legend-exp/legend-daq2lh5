@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import bz2
 import gzip
 import json
 import logging
@@ -201,6 +202,8 @@ class OrcaStreamer(DataStreamer):
             self.close_in_stream()
         if stream_name.endswith(".gz"):
             self.in_stream = gzip.open(stream_name.encode("utf-8"), "rb")
+        elif stream_name.endswith(".bz2"):
+            self.in_stream = bz2.open(stream_name.encode("utf-8"), "rb")
         else:
             self.in_stream = open(stream_name.encode("utf-8"), "rb")
         self.n_bytes_read = 0
