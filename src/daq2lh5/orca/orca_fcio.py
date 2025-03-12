@@ -113,6 +113,11 @@ class ORFCIOConfigDecoder(OrcaDecoder):
 
         super().__init__(header=header, **kwargs)
 
+        # The ConfigDecoder is always required for decoding fcio data.
+        # When OrcaStreamer.open_stream is called, we close any open fcio stream
+        for fcio_stream in fcio_stream_library.values():
+            fcio_stream.close()
+
     def set_header(self, header: OrcaHeader) -> None:
         self.header = header
         self.fc_hdr_info = extract_header_information(header)
