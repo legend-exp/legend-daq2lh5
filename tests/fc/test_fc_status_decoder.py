@@ -24,8 +24,6 @@ def status_rbkd(fcio_obj):
 
     ncards = decoder.get_max_rows_in_packet()
 
-    print(ncards)
-
     assert ncards == fcio_obj.status.cards
 
     # build raw buffer for each channel in the FC trace list
