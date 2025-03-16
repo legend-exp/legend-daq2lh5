@@ -128,10 +128,8 @@ class DataStreamer(ABC):
             dec_names.append(dec_name)
 
             # Parse wildcard keys in RawBuffers and replace with known keys of the decoder.
-            dec_key_list = sum(decoder.get_key_lists(), [])
-            dec_key_list = set(map(str, dec_key_list))
-
-            log.debug(f"{dec_name} offers keys {dec_key_list}")
+            dec_key_list = set(sum(decoder.get_key_lists(), []))
+            log.debug(f"{dec_name} offers keys: {dec_key_list}")
 
             # track keys which are already used
             matched_keys = set()
@@ -139,7 +137,9 @@ class DataStreamer(ABC):
             wildcard_rbs = []
             # find wildcard key buffers
             for rb in rb_lib[dec_name]:
+                log.debug(f"rb {rb.out_name} seeks keys: {rb.key_list}")
                 for key in rb.key_list:
+                    # only string can contain wildcard *
                     if not isinstance(key, str):
                         matched_keys.add(key)
                         continue
@@ -155,19 +155,25 @@ class DataStreamer(ABC):
                         wildcard_rbs.append(rb)
                     else:
                         matched_keys.add(key)
+
             # append pure wildcard, so it matches last
             if only_wildcard_rb is not None:
                 wildcard_rbs.append(only_wildcard_rb)
 
-            # remove already matched keys
-            dec_key_list = dec_key_list.symmetric_difference(matched_keys)
+            # remove already matched keys with original key type
+            dec_key_list = dec_key_list.difference(matched_keys)
+            dec_key_list = set(map(str, dec_key_list))
+            # remove already matched keys with str key type
+            dec_key_list = dec_key_list.difference(matched_keys)
+
+            log.debug(f"{dec_name} remaining keys: {dec_key_list}")
 
             for rb in wildcard_rbs:
                 matched_keys = set()
                 for key in rb.key_list:
                     # find matching keys in the decoder list
                     matches = set(fnmatch.filter(dec_key_list, key))
-                    dec_key_list = dec_key_list.symmetric_difference(matches)
+                    dec_key_list = dec_key_list.difference(matches)
 
                     log.debug(f"{dec_name} {key} matched keys: {matches}")
                     log.debug(f"{dec_name} remaining keys: {dec_key_list}")
