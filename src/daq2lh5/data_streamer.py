@@ -128,6 +128,8 @@ class DataStreamer(ABC):
             dec_names.append(dec_name)
 
             # Parse wildcard keys in RawBuffers and replace with known keys of the decoder.
+            print(decoder.get_key_lists())
+            print(sum(decoder.get_key_lists(), []))
             dec_key_list = set(sum(decoder.get_key_lists(), []))
             log.debug(f"{dec_name} offers keys: {dec_key_list}")
 
