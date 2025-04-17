@@ -88,10 +88,9 @@ def test_build_raw_fc_out_spec(lgnd_test_data, tmptestdir):
         overwrite=True,
     )
 
-    store = lh5.LH5Store()
-    lh5_obj = store.read("/spms", out_file)
-    assert len(lh5_obj) == 10
-    assert (lh5_obj["channel"].nda == [2, 3, 4, 2, 3, 4, 2, 3, 4, 2]).all()
+    lh5_obj = lh5.read("/spms", out_file)
+    assert len(lh5_obj) == 10 * 3
+    assert (lh5_obj["channel"].nda == [2, 3, 4] * 10).all()
 
     with open(f"{config_dir}/fc-out-spec.json") as f:
         out_spec = json.load(f)
@@ -172,8 +171,7 @@ def test_build_raw_orca_out_spec(lgnd_test_data, tmptestdir):
         overwrite=True,
     )
 
-    store = lh5.LH5Store()
-    lh5_obj = store.read("/geds", out_file)
+    lh5_obj = lh5.read("/geds", out_file)
     assert len(lh5_obj) == 10
     assert (lh5_obj["channel"].nda == [2, 3, 4, 2, 3, 4, 2, 3, 4, 2]).all()
 
@@ -269,10 +267,7 @@ def test_build_raw_wf_compression_in_decoded_values(lgnd_test_data, tmptestdir):
         assert f["ORFlashCamADCWaveform/waveform/t0"].shuffle is True
         assert f["ORFlashCamADCWaveform/waveform/t0"].compression is None
 
-    store = lh5.LH5Store()
-    obj = store.read(
-        "ORFlashCamADCWaveform/waveform/values", out_file, decompress=False
-    )
+    obj = lh5.read("ORFlashCamADCWaveform/waveform/values", out_file, decompress=False)
     assert obj.attrs["codec"] == "uleb128_zigzag_diff"
 
 
@@ -317,8 +312,7 @@ def test_build_raw_compass_out_spec(lgnd_test_data, tmptestdir):
         ),
     )
 
-    store = lh5.LH5Store()
-    lh5_obj = store.read("/spms", out_file)
+    lh5_obj = lh5.read("/spms", out_file)
     assert len(lh5_obj) == 10
     assert (lh5_obj["channel"].nda == [0, 1, 0, 1, 0, 1, 0, 1, 0, 1]).all()
 
@@ -336,8 +330,7 @@ def test_build_raw_compass_out_spec_no_config(lgnd_test_data, tmptestdir):
         overwrite=True,
     )
 
-    store = lh5.LH5Store()
-    lh5_obj = store.read("/spms", out_file)
+    lh5_obj = lh5.read("/spms", out_file)
     assert len(lh5_obj) == 10
     assert (lh5_obj["channel"].nda == [0, 1, 0, 1, 0, 1, 0, 1, 0, 1]).all()
 

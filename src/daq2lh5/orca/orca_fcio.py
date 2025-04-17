@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 import logging
 from typing import Any
@@ -131,7 +133,7 @@ class ORFCIOConfigDecoder(OrcaDecoder):
                 self.key_list["fsp_config"].append(f"fsp_config_{key}")
         self.max_rows_in_packet = 1
 
-    def get_key_lists(self) -> list[list[int,str]]:
+    def get_key_lists(self) -> list[list[int, str]]:
         return list(self.key_list.values())
 
     def get_decoded_values(self, key: int | str = None) -> dict[str, Any]:

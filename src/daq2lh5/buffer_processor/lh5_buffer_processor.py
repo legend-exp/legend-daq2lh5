@@ -74,14 +74,14 @@ def lh5_buffer_processor(
         # Look one layer deeper for a :meth:`lgdo.Table` if necessary
         elif lh5.ls(lh5_file, f"{tb}"):
             # Check to make sure that this isn't a table itself
-            maybe_table = raw_store.read(f"{tb}", lh5_file)
+            maybe_table = lh5.read(f"{tb}", lh5_file)
             if isinstance(maybe_table, lgdo.Table):
                 lh5_tables.append(f"{tb}")
                 del maybe_table
             # otherwise, go deeper
             else:
                 for sub_table in lh5.ls(lh5_file, f"{tb}"):
-                    maybe_table, _ = raw_store.read(f"{tb}/{sub_table}", lh5_file)
+                    maybe_table = lh5.read(f"{tb}/{sub_table}", lh5_file)
                     if isinstance(maybe_table, lgdo.Table):
                         lh5_tables.append(f"{tb}/{sub_table}")
                     del maybe_table
@@ -114,7 +114,7 @@ def lh5_buffer_processor(
 
     # Write everything in the raw file to the new file, check for proc_spec under either the group name, out_name, or the name
     for tb in lh5_tables:
-        lgdo_obj = raw_store.read(f"{tb}", lh5_file)
+        lgdo_obj = lh5.read(f"{tb}", lh5_file)
 
         # Find the out_name.
         # If the top level group has an lgdo table in it, then the out_name is group
@@ -198,4 +198,4 @@ def lh5_buffer_processor(
                 pass
 
         # Write the (possibly processed) lgdo_obj to a file
-        raw_store.write(lgdo_obj, out_name, lh5_file=proc_file_name, group=group_name)
+        lh5.write(lgdo_obj, out_name, lh5_file=proc_file_name, group=group_name)

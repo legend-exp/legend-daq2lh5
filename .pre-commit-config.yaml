@@ -67,6 +67,7 @@ repos:
       flake8-print,
       pep8-naming
     ]
+    args: ["--extend-ignore", "E203,E501,D10"]
 
 - repo: https://github.com/kynan/nbstripout
   rev: "0.8.1"
@@ -85,6 +86,8 @@ repos:
   rev: "v2.4.1"
   hooks:
   - id: codespell
+    additional_dependencies:
+        - tomli
     args: ["-L", "nd,unparseable,compiletime"]
 
 - repo: https://github.com/shellcheck-py/shellcheck-py
