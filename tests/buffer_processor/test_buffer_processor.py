@@ -272,12 +272,13 @@ def test_buffer_processor_file_size_decrease(lgnd_test_data, tmptestdir):
     wf_size = 0
 
     for raw_group in lh5_tables:
-        wf_size += sys.getsizeof(
-            lh5.read(str(raw_group) + "/waveform/values", raw_file).nda
-        )
-
-    # Make sure we are taking up not much more space than a file that has two copies of the waveform table in it
-    assert os.path.getsize(processed_file) < (os.path.getsize(raw_file) + wf_size) * 10
+        curr_wf = lh5.read(str(raw_group) + "/waveform/values", raw_file)
+        if hasattr(curr_wf, "_nda"):
+            wf_size += sys.getsizeof(curr_wf._nda)
+        else:
+            wf_size += sys.getsizeof(curr_wf.nda)
+    # Make sure we are taking up less space than a file that has two copies of the waveform table in it
+    assert os.path.getsize(processed_file) < os.path.getsize(raw_file) + wf_size
 
 
 # check that packet indexes match in verification test on file that has both spms and geds

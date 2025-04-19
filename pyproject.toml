@@ -114,7 +114,7 @@ report.exclude_also = [
 extend-ignore = "E203, E501, D10"
 
 [tool.codespell]
-ignore-words-list = "hist, gaus, nd, ans, crate, nin, puls, spms, fom, FOM"
+ignore-words-list = "nd,unparseable,compiletime,puls"
 
 [tool.pytest.ini_options]
 minversion = "6.0"

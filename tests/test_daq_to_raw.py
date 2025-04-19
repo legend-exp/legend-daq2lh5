@@ -5,7 +5,7 @@ import struct
 from collections import Counter
 from io import BytesIO
 
-from lgdo.lh5 import LH5Store
+import lgdo.lh5 as lh5
 
 from daq2lh5 import build_raw
 from daq2lh5.orca import orca_streamer
@@ -25,7 +25,6 @@ class OrcaEncoder:
     def encode_header(self):
         """Convert orca header back to a byte string."""
 
-        lh5 = LH5Store()
         test_file = lh5.read(
             "OrcaHeader",
             self.file,
@@ -64,7 +63,6 @@ class OrcaEncoder:
     def encode_orflashcamconfig(self, ii):
         """Convert orca flashcam config data back to byte strings."""
 
-        lh5 = LH5Store()
         tbl = lh5.read(
             "ORFlashCamListenerConfig",
             self.file,
@@ -103,7 +101,6 @@ class OrcaEncoder:
     def encode_orflashcamadcwaveform(self, ii):
         """Convert orca flashcam ADC waveform data back to byte strings."""
 
-        lh5 = LH5Store()
         tbl = lh5.read(
             "ORFlashCamADCWaveform",
             self.file,
@@ -170,7 +167,6 @@ class OrcaEncoder:
     def encode_orrun(self, ii):
         """Convert orca run data back to byte strings."""
 
-        lh5 = LH5Store()
         tbl = lh5.read(
             "ORRunDecoderForRun",
             self.file,
