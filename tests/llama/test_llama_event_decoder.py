@@ -1,3 +1,5 @@
+import datetime
+
 import lgdo
 import pytest
 
@@ -49,6 +51,11 @@ def test_first_packet(open_stream):
     assert tbl["fadc_channel_id"].nda[ii] == 0
     assert tbl["packet_id"].nda[ii] == 1
     assert tbl["time_since_run_start"].nda[ii] == pytest.approx(0.00303012)
+    assert tbl["unixtime"].nda[ii] == pytest.approx(
+        datetime.datetime(2024, 12, 18, 15, 1, 58).timestamp() + 0.00303012,
+        abs=0.00000001,
+    )  # 1734530518
+    assert tbl["unixtime_accuracy"].nda[ii] == pytest.approx(1.0)
     assert tbl["wf_max_sample_value"].nda[ii] == 9454
     assert tbl["wf_max_sample_idx"].nda[ii] == 1968
     assert tbl["info_bits"].nda[ii] == 0
