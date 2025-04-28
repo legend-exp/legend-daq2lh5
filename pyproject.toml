@@ -13,7 +13,7 @@ write_to = "src/daq2lh5/_version.py"
 minversion = "6.0"
 addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
 xfail_strict = true
-filterwarnings = ["error", 'ignore:\nPyarrow:DeprecationWarning']
+filterwarnings = ["error"]
 log_cli_level = "info"
 testpaths = "tests"
 
