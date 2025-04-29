@@ -20,6 +20,8 @@ llama_decoded_values_template = {
     "fadc_channel_id": {"dtype": "uint32"},
     # time since epoch
     "time_since_run_start": {"dtype": "float64", "units": "s"},
+    "unixtime": {"dtype": "float64", "units": "s"},
+    "unixtime_accuracy": {"dtype": "float64", "units": "s"},
     "fadc_status_bits": {"dtype": "uint32"},
     # waveform data --> not always present
     # "waveform": {
@@ -109,6 +111,9 @@ class LLAMAEventDecoder(DataDecoder):
             if format_bits & 0x08:
                 self.__add_energy(self.decoded_values[fch])
 
+    def set_global_configs(self, global_configs: dict[str, Any]):
+        self.global_configs = global_configs
+
     def get_key_lists(self) -> list[list[int | str]]:
         """Get list of keys.
 
@@ -196,6 +201,11 @@ class LLAMAEventDecoder(DataDecoder):
         tbl["fadc_channel_id"].nda[ii] = fadc_channel_id
         tbl["packet_id"].nda[ii] = packet_id
         tbl["time_since_run_start"].nda[ii] = timestamp
+        tbl["unixtime"].nda[ii] = timestamp + self.global_configs["initial_timestamp"]
+        # accuracy when comparing timestamps of different files:
+        tbl["unixtime_accuracy"].nda[ii] = self.global_configs[
+            "initial_timestamp_accuracy"
+        ]
 
         offset = 2
         if format_bits & 0x1:

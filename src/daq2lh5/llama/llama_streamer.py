@@ -53,12 +53,15 @@ class LLAMAStreamer(DataStreamer):
         self.packet_id = 0
 
         # read header info here
-        header, n_bytes_hdr = self.header_decoder.decode_header(self.in_stream)
+        header, n_bytes_hdr = self.header_decoder.decode_header(
+            self.in_stream, llama_filename
+        )
         self.n_bytes_read += n_bytes_hdr
 
         self.event_decoder.set_channel_configs(
             self.header_decoder.get_channel_configs()
         )
+        self.event_decoder.set_global_configs(self.header_decoder.get_global_configs())
 
         # as far as I can tell, this happens if a user does not specify output.
         # Then I can still get a rb_lib, but that misses keys entirely, which I need since channels can have different setups.

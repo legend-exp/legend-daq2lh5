@@ -87,8 +87,8 @@ def test_build_raw_fc_out_spec(lgnd_test_data, tmptestdir):
     )
 
     store = lh5.LH5Store()
-    lh5_obj, n_rows = store.read("/spms", out_file)
-    assert n_rows == 10
+    lh5_obj = store.read("/spms", out_file)
+    assert len(lh5_obj) == 10
     assert (lh5_obj["channel"].nda == [2, 3, 4, 2, 3, 4, 2, 3, 4, 2]).all()
 
     with open(f"{config_dir}/fc-out-spec.json") as f:
@@ -164,8 +164,8 @@ def test_build_raw_orca_out_spec(lgnd_test_data, tmptestdir):
     )
 
     store = lh5.LH5Store()
-    lh5_obj, n_rows = store.read("/geds", out_file)
-    assert n_rows == 10
+    lh5_obj = store.read("/geds", out_file)
+    assert len(lh5_obj) == 10
     assert (lh5_obj["channel"].nda == [2, 3, 4, 2, 3, 4, 2, 3, 4, 2]).all()
 
     with open(f"{config_dir}/orca-out-spec.json") as f:
@@ -259,7 +259,7 @@ def test_build_raw_wf_compression_in_decoded_values(lgnd_test_data, tmptestdir):
         assert f["ORFlashCamADCWaveform/waveform/t0"].compression is None
 
     store = lh5.LH5Store()
-    obj, _ = store.read(
+    obj = store.read(
         "ORFlashCamADCWaveform/waveform/values", out_file, decompress=False
     )
     assert obj.attrs["codec"] == "uleb128_zigzag_diff"
@@ -307,8 +307,8 @@ def test_build_raw_compass_out_spec(lgnd_test_data, tmptestdir):
     )
 
     store = lh5.LH5Store()
-    lh5_obj, n_rows = store.read("/spms", out_file)
-    assert n_rows == 10
+    lh5_obj = store.read("/spms", out_file)
+    assert len(lh5_obj) == 10
     assert (lh5_obj["channel"].nda == [0, 1, 0, 1, 0, 1, 0, 1, 0, 1]).all()
 
 
@@ -326,8 +326,8 @@ def test_build_raw_compass_out_spec_no_config(lgnd_test_data, tmptestdir):
     )
 
     store = lh5.LH5Store()
-    lh5_obj, n_rows = store.read("/spms", out_file)
-    assert n_rows == 10
+    lh5_obj = store.read("/spms", out_file)
+    assert len(lh5_obj) == 10
     assert (lh5_obj["channel"].nda == [0, 1, 0, 1, 0, 1, 0, 1, 0, 1]).all()
 
 
