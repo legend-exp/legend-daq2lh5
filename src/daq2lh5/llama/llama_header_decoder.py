@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import datetime
 import io
 import logging
+import os
+import re
 from typing import Any, Dict
 
 import lgdo
@@ -13,6 +16,25 @@ from .llama_base import join_fadcid_chid
 log = logging.getLogger(__name__)
 
 LLAMA_Channel_Configs_t = Dict[int, Dict[str, Any]]
+
+
+def parse_filename_for_timestamp(f_in_name: str) -> float:
+    """take a filename; return the unixtime parsed from the filename; 0 if impossible."""
+    filename = os.path.basename(f_in_name)
+    if match := re.fullmatch(r".*(\d{8})[-T](\d{6})(Z?).*", filename):
+        tsymd = match.group(1)
+        tshms = match.group(2)
+        utc: bool = True if match.group(3) == "Z" else False
+        when_file: datetime.datetime = datetime.datetime.strptime(
+            tsymd + tshms, "%Y%m%d%H%M%S"
+        )  # naive datetime object
+        if utc:
+            when_file = when_file.replace(
+                tzinfo=datetime.timezone.utc
+            )  # make it aware; UTC. Naive is treated as local
+        return when_file.timestamp()
+    else:
+        return 0
 
 
 class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
@@ -31,7 +53,7 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
         self.config = lgdo.Struct()
         self.channel_configs = None
 
-    def decode_header(self, f_in: io.BufferedReader) -> lgdo.Struct:
+    def decode_header(self, f_in: io.BufferedReader, f_in_name: str) -> lgdo.Struct:
         n_bytes_read = 0
 
         f_in.seek(0)  # should be there anyhow, but re-set if not
@@ -55,6 +77,15 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
         self.length_econf = evt_data_16[5]
         self.number_chOpen = evt_data_32[3]
 
+        self.global_configs = {}
+
+        # currently pulled from filename with 1s precision.
+        # change if we have it in the llamaDAQ file's header
+        self.global_configs["initial_timestamp"] = parse_filename_for_timestamp(
+            f_in_name
+        )
+        self.global_configs["initial_timestamp_accuracy"] = 1.0  # in seconds
+
         log.debug(
             f"File version: {self.version_major}.{self.version_minor}.{self.version_patch}"
         )
@@ -72,6 +103,13 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
         self.config.add_field("version_patch", lgdo.Scalar(self.version_patch))
         self.config.add_field("length_econf", lgdo.Scalar(self.length_econf))
         self.config.add_field("number_chOpen", lgdo.Scalar(self.number_chOpen))
+        self.config.add_field(
+            "initial_timestamp", lgdo.Scalar(self.global_configs["initial_timestamp"])
+        )
+        self.config.add_field(
+            "initial_timestamp_accuracy",
+            lgdo.Scalar(self.global_configs["initial_timestamp_accuracy"]),
+        )
 
         for fch_id, fch_content in self.channel_configs.items():
             fch_lgdo = lgdo.Struct()
@@ -87,6 +125,9 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
 
     def get_channel_configs(self) -> LLAMA_Channel_Configs_t:
         return self.channel_configs
+
+    def get_global_configs(self) -> dict[str, Any]:
+        return self.global_configs
 
     def __decode_channel_configs(self, f_in: io.BufferedReader) -> int:
         """Reads the metadata.
