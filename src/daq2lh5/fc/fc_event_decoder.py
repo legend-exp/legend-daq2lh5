@@ -80,7 +80,7 @@ fc_decoded_values = {
 }
 """Default FlashCam Event decoded values.
 
-Re-used by :class:`~.orca.orca_flashcam.ORFlashCamWaveformDecoder`.
+Reused by :class:`~.orca.orca_flashcam.ORFlashCamWaveformDecoder`.
 
 Warning
 -------
