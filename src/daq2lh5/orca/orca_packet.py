@@ -20,9 +20,19 @@ def is_short(packet: OrcaPacket) -> bool:
     return bool(packet[0] >> 31)
 
 
+def is_extended(packet: OrcaPacket) -> bool:
+    # if the packet is 0 size in default format
+    # the length if the packet is stored in the next uint32
+    return bool((packet[0] & 0x3FFFF) == 0)
+
+
 def get_n_words(packet: OrcaPacket) -> int:
     if is_short(packet):
         return 1
+    if is_extended(packet):
+        # we could check here if packet is actually long enough
+        # to return packet[1]
+        return packet[1]
     return packet[0] & 0x3FFFF
 
 

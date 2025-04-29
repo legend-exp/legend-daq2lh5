@@ -15,6 +15,12 @@ from .orca_digitizers import (  # noqa: F401
     ORSIS3302DecoderForEnergy,
     ORSIS3316WaveformDecoder,
 )
+from .orca_fcio import (  # noqa: F401;
+    ORFCIOConfigDecoder,
+    ORFCIOEventDecoder,
+    ORFCIOEventHeaderDecoder,
+    ORFCIOStatusDecoder,
+)
 from .orca_flashcam import (  # noqa: F401;
     ORFlashCamADCWaveformDecoder,
     ORFlashCamListenerConfigDecoder,
@@ -41,18 +47,28 @@ class OrcaStreamer(DataStreamer):
         self.rbl_id_dict = {}  # dict of RawBufferLists for each data_id
         self.missing_decoders = []
 
-    def load_packet_header(self) -> np.uint32 | None:
+    def load_packet_header(self) -> np.ndarray | None:
         """Loads the packet header at the current read location into the buffer
 
         and updates internal variables.
         """
-        pkt_hdr = self.buffer[:1]
+        pkt_hdr = self.buffer[:2]
         n_bytes_read = self.in_stream.readinto(pkt_hdr)  # buffer is at least 4 kB long
         self.n_bytes_read += n_bytes_read
         if n_bytes_read == 0:  # EOF
             return None
-        if n_bytes_read != 4:
-            raise RuntimeError(f"only got {n_bytes_read} bytes for packet header")
+        if (n_bytes_read % 4) != 0:
+            raise RuntimeError(
+                f"got {n_bytes_read} bytes for packet header, expect 4 or 8."
+            )
+        if orca_packet.is_extended(pkt_hdr) and n_bytes_read < 8:
+            raise RuntimeError(
+                f"got {n_bytes_read} bytes for packet header, but require 8 for the extended header format."
+            )
+        if orca_packet.is_short(pkt_hdr) and n_bytes_read > 4:
+            # if more than 4 bytes were read but the packet is short, we reset the file stream
+            # so we can read the next uint32_t again. would not be necessary with a circular buffer
+            self.in_stream.seek(n_bytes_read - 4, 1)
 
         # packet is valid. Can set the packet_id and log its location
         self.packet_id += 1
@@ -90,7 +106,9 @@ class OrcaStreamer(DataStreamer):
             pkt_hdr = self.load_packet_header()
             if pkt_hdr is None:
                 return False
-            self.in_stream.seek((orca_packet.get_n_words(pkt_hdr) - 1) * 4, 1)
+            self.in_stream.seek(
+                (orca_packet.get_n_words(pkt_hdr) - len(pkt_hdr)) * 4, 1
+            )
             n -= 1
         return True
 
@@ -106,14 +124,14 @@ class OrcaStreamer(DataStreamer):
             self.in_stream.seek(loc)
             self.packet_id = pid
 
-    def count_packets(self, saveloc=True) -> None:
+    def count_packets(self, saveloc=True) -> int:
         self.build_packet_locs(saveloc=saveloc)
         return len(self.packet_locs)
 
     # TODO: need to correct for endianness?
     def load_packet(
         self, index: int = None, whence: int = 0, skip_unknown_ids: bool = False
-    ) -> np.uint32 | None:
+    ) -> np.ndarray | None:
         """Loads the next packet into the internal buffer.
 
         Returns packet as a :class:`numpy.uint32` view of the buffer (a slice),
@@ -177,15 +195,15 @@ class OrcaStreamer(DataStreamer):
             and orca_packet.get_data_id(pkt_hdr, shift=False)
             not in self.decoder_id_dict
         ):
-            self.in_stream.seek((n_words - 1) * 4, 1)
+            self.in_stream.seek((n_words - len(pkt_hdr)) * 4, 1)
             return pkt_hdr
 
         # load into buffer, resizing as necessary
         if len(self.buffer) < n_words:
             self.buffer.resize(n_words, refcheck=False)
-        n_bytes_read = self.in_stream.readinto(self.buffer[1:n_words])
+        n_bytes_read = self.in_stream.readinto(self.buffer[len(pkt_hdr) : n_words])
         self.n_bytes_read += n_bytes_read
-        if n_bytes_read != (n_words - 1) * 4:
+        if n_bytes_read != (n_words - len(pkt_hdr)) * 4:
             log.error(
                 f"only got {n_bytes_read} bytes for packet read when {(n_words-1)*4} were expected. Flushing all buffers and quitting..."
             )

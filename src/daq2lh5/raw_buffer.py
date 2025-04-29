@@ -66,6 +66,7 @@ keys.
 
 from __future__ import annotations
 
+import logging
 import os
 
 import lgdo
@@ -73,6 +74,8 @@ from lgdo import LGDO
 from lgdo.lh5 import LH5Store
 
 from .buffer_processor.buffer_processor import buffer_processor
+
+log = logging.getLogger(__name__)
 
 
 class RawBuffer:
@@ -183,6 +186,8 @@ class RawBufferList(list):
             self.keyed_dict = {}
             for rb in self:
                 for key in rb.key_list:
+                    if key in self.keyed_dict:
+                        log.warning(f"Key {key} is duplicate.")
                     self.keyed_dict[key] = rb
         return self.keyed_dict
 
