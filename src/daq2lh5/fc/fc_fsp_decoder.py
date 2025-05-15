@@ -18,12 +18,22 @@ fsp_config_decoded_values = {
     "buffer_max_states": {"dtype": "int32", "description": ""},
     "buffer_window_nsec": {"dtype": "int64", "description": ""},
     "trg_hwm_min_multiplicity": {"dtype": "int32", "description": ""},
-    "trg_hwm_prescale_ratio": {"dtype": "int32", "description": ""},
+    "trg_hwm_prescale_ratio": {
+        "dtype": "int32",
+        "datatype": "array<1>{array<1>{real}}",
+        "length_guess": Limits.MaxChannels,
+        "description": "",
+    },
     "trg_wps_prescale_ratio": {"dtype": "int32", "description": ""},
     "trg_wps_coincident_sum_threshold": {"dtype": "float32", "description": ""},
     "trg_wps_sum_threshold": {"dtype": "float32", "description": ""},
     "trg_wps_prescale_rate": {"dtype": "float32", "description": ""},
-    "trg_hwm_prescale_rate": {"dtype": "float32", "description": ""},
+    "trg_hwm_prescale_rate": {
+        "dtype": "float32",
+        "datatype": "array<1>{array<1>{real}}",
+        "length_guess": Limits.MaxChannels,
+        "description": "",
+    },
     "trg_wps_ref_flags_hwm": {"dtype": "int64", "description": ""},
     "trg_wps_ref_flags_ct": {"dtype": "int64", "description": ""},
     "trg_wps_ref_flags_wps": {"dtype": "int64", "description": ""},
@@ -413,13 +423,19 @@ class FSPConfigDecoder(DataDecoder):
 
         # TriggerConfig
         triggerconfig = fcio.fsp.config.triggerconfig
+        hwm = fcio.fsp.config.hwm
+        hwm_n_traces = hwm["tracemap"]["n_mapped"]
         self.fsp_config.add_field(
             "trg_hwm_min_multiplicity",
             lgdo.Scalar(np.int32(triggerconfig["hwm_min_multiplicity"])),
         )
         self.fsp_config.add_field(
             "trg_hwm_prescale_ratio",
-            lgdo.Scalar(np.int32(triggerconfig["hwm_prescale_ratio"])),
+            lgdo.Array(
+                np.array(triggerconfig["hwm_prescale_ratio"], dtype="int32")[
+                    :hwm_n_traces
+                ]
+            ),
         )
         self.fsp_config.add_field(
             "trg_wps_prescale_ratio",
@@ -439,7 +455,11 @@ class FSPConfigDecoder(DataDecoder):
         )
         self.fsp_config.add_field(
             "trg_hwm_prescale_rate",
-            lgdo.Scalar(np.float32(triggerconfig["hwm_prescale_rate"])),
+            lgdo.Array(
+                np.array(triggerconfig["hwm_prescale_rate"], dtype="float32")[
+                    :hwm_n_traces
+                ]
+            ),
         )
 
         self.fsp_config.add_field(
@@ -749,6 +769,12 @@ fsp_event_decoded_values = {
         "length_guess": Limits.MaxChannels,
         "description": "",
     },
+    "obs_ps_hwm_prescaled_trace_idx": {
+        "dtype": "uint16",
+        "datatype": "array<1>{array<1>{real}}",
+        "length_guess": Limits.MaxChannels,
+        "description": "",
+    },
     "obs_evt_nconsecutive": {"dtype": "int32", "description": ""},
 }
 
@@ -807,7 +833,8 @@ class FSPEventDecoder(DataDecoder):
         tbl["obs_wps_max_peak_offset"].nda[
             loc
         ] = fcio.fsp.event.obs_wps_max_single_peak_offset
-        tbl["obs_hwm_multiplicity"].nda[loc] = fcio.fsp.event.obs_hwm_multiplicity
+        tbl["obs_hwm_hw_multiplicity"].nda[loc] = fcio.fsp.event.obs_hwm_hw_multiplicity
+        tbl["obs_hwm_sw_multiplicity"].nda[loc] = fcio.fsp.event.obs_hwm_sw_multiplicity
         tbl["obs_hwm_max_value"].nda[loc] = fcio.fsp.event.obs_hwm_max_value
         tbl["obs_hwm_min_value"].nda[loc] = fcio.fsp.event.obs_hwm_min_value
         tbl["obs_evt_nconsecutive"].nda[loc] = fcio.fsp.event.obs_evt_nconsecutive
@@ -824,6 +851,19 @@ class FSPEventDecoder(DataDecoder):
 
         tbl["obs_ct_trace_idx"].cumulative_length[loc] = end
         tbl["obs_ct_max"].cumulative_length[loc] = end
+
+        lens = len(fcio.fsp.event.obs_ps_hwm_prescaled_trace_idx)
+        start = (
+            0
+            if loc == 0
+            else tbl["obs_ps_hwm_prescaled_trace_idx"].cumulative_length[loc - 1]
+        )
+        end = start + lens
+        if lens > 0:
+            tbl["obs_ps_hwm_prescaled_trace_idx"].flattened_data.nda[
+                start:end
+            ] = fcio.fsp.event.obs_ps_hwm_prescaled_trace_ix
+        tbl["obs_ps_hwm_prescaled_trace_idx"].cumulative_length[loc] = end
 
         fsp_evt_rb.loc += 1
 
