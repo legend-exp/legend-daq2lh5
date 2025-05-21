@@ -222,7 +222,7 @@ class FCStreamer(DataStreamer):
                 )
             if self.fcio.fsp and self.fsp_event_rbkd is not None:
                 self.any_full |= self.fsp_event_decoder.decode_packet(
-                    self.fcio, self.fsp_event_rbkd, self.packet_id
+                    self.fcio, self.fsp_event_rbkd, self.packet_id, False
                 )
 
         elif self.fcio.tag == Tags.EventHeader:
@@ -232,7 +232,7 @@ class FCStreamer(DataStreamer):
                 )
             if self.fcio.fsp and self.fsp_event_rbkd is not None:
                 self.any_full |= self.fsp_event_decoder.decode_packet(
-                    self.fcio, self.fsp_event_rbkd, self.packet_id
+                    self.fcio, self.fsp_event_rbkd, self.packet_id, True
                 )
 
         # FIXME: push to a buffer of skipped packets?

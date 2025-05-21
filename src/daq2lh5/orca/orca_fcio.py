@@ -260,7 +260,7 @@ class ORFCIOEventHeaderDecoder(OrcaDecoder):
         self.decoder = FCEventHeaderDecoder()
         self.fsp_decoder = None
         self.decoded_values = {}
-        self.key_list = {"fc_eventheader": [], "fsp_event": []}
+        self.key_list = {"fc_eventheader": [], "fsp_eventheader": []}
 
         super().__init__(header=header, **kwargs)
 
@@ -277,7 +277,7 @@ class ORFCIOEventHeaderDecoder(OrcaDecoder):
             self.decoded_values[fcid] = copy.deepcopy(self.decoder.get_decoded_values())
             if self.fc_hdr_info["fsp_enabled"][fcid]:
                 self.fsp_decoder = FSPEventDecoder()
-                self.key_list["fsp_event"].append(f"fsp_event_{key}")
+                self.key_list["fsp_eventheader"].append(f"fsp_eventheader_{key}")
 
         self.max_rows_in_packet = 1
 
@@ -287,7 +287,7 @@ class ORFCIOEventHeaderDecoder(OrcaDecoder):
     def get_decoded_values(self, key: int | str = None) -> dict[str, Any]:
         if (
             isinstance(key, str)
-            and key.startswith("fsp_event")
+            and key.startswith("fsp_eventheader_")
             and self.fsp_decoder is not None
         ):
             return copy.deepcopy(self.fsp_decoder.get_decoded_values())
@@ -313,7 +313,7 @@ class ORFCIOEventHeaderDecoder(OrcaDecoder):
                 )
                 if self.fsp_decoder is not None:
                     any_full |= self.fsp_decoder.decode_packet(
-                        fcio_stream, evthdr_rbkd, packet_id
+                        fcio_stream, evthdr_rbkd, packet_id, True
                     )
 
         return bool(any_full)
@@ -364,7 +364,7 @@ class ORFCIOEventDecoder(OrcaDecoder):
 
         if (
             isinstance(key, str)
-            and key.startswith("fsp_event")
+            and key.startswith("fsp_event_")
             and self.fsp_decoder is not None
         ):
             return copy.deepcopy(self.fsp_decoder.get_decoded_values())
@@ -390,7 +390,7 @@ class ORFCIOEventDecoder(OrcaDecoder):
                 any_full |= self.decoder.decode_packet(fcio_stream, evt_rbkd, packet_id)
                 if self.fsp_decoder is not None:
                     any_full |= self.fsp_decoder.decode_packet(
-                        fcio_stream, evt_rbkd, packet_id
+                        fcio_stream, evt_rbkd, packet_id, False
                     )
 
         return bool(any_full)

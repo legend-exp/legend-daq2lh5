@@ -195,6 +195,8 @@ class FSPConfigDecoder(DataDecoder):
             self.decoded_values["trg_wps_ref_map_idx"]["length_guess"] = (
                 fcio_stream.fsp.config.triggerconfig["n_wps_ref_map_idx"]
             )
+            self.decoded_values["trg_hwm_prescale_ratio"]["length"] = hwm_n_traces
+            self.decoded_values["trg_hwm_prescale_rate"]["length"] = hwm_n_traces
             self.decoded_values["dsp_wps_tracemap_indices"][
                 "length_guess"
             ] = wps_n_traces
@@ -261,8 +263,9 @@ class FSPConfigDecoder(DataDecoder):
         tbl["trg_hwm_min_multiplicity"].nda[loc] = np.int32(
             triggerconfig["hwm_min_multiplicity"]
         )
-        tbl["trg_hwm_prescale_ratio"].nda[loc] = np.int32(
-            triggerconfig["hwm_prescale_ratio"]
+        tbl["trg_hwm_prescale_ratio"]._set_vector_unsafe(
+            loc,
+            np.array(triggerconfig["hwm_prescale_ratio"], dtype="int32")[:hwm_n_traces],
         )
         tbl["trg_wps_prescale_ratio"].nda[loc] = np.int32(
             triggerconfig["wps_prescale_ratio"]
@@ -276,8 +279,11 @@ class FSPConfigDecoder(DataDecoder):
         tbl["trg_wps_prescale_rate"].nda[loc] = np.float32(
             triggerconfig["wps_prescale_rate"]
         )
-        tbl["trg_hwm_prescale_rate"].nda[loc] = np.float32(
-            triggerconfig["hwm_prescale_rate"]
+        tbl["trg_hwm_prescale_rate"]._set_vector_unsafe(
+            loc,
+            np.array(triggerconfig["hwm_prescale_rate"], dtype="float32")[
+                :hwm_n_traces
+            ],
         )
         tbl["trg_wps_ref_flags_hwm"].nda[loc] = np.int64(
             triggerconfig["wps_ref_flags_hwm"]["is_flagged"]
@@ -789,7 +795,10 @@ class FSPEventDecoder(DataDecoder):
 
     def set_fcio_stream(self, fcio_stream: FCIO) -> None:
 
-        self.key_list = [f"fsp_event_{get_key(fcio_stream.config.streamid, 0, 0)}"]
+        self.key_list = [
+            f"fsp_event_{get_key(fcio_stream.config.streamid, 0, 0)}",
+            f"fsp_eventheader_{get_key(fcio_stream.config.streamid, 0, 0)}",
+        ]
 
     def get_decoded_values(self, key: int = None) -> dict[str, dict[str, Any]]:
         return self.decoded_values
@@ -802,9 +811,14 @@ class FSPEventDecoder(DataDecoder):
         fcio: FCIO,
         fsp_evt_rbkd: dict[int, lgdo.Table],
         packet_id: int,
+        is_header: bool = False,
     ) -> bool:
 
-        key = f"fsp_event_{get_key(fcio.config.streamid, 0, 0)}"
+        if is_header:
+            key = f"fsp_eventheader_{get_key(fcio.config.streamid, 0, 0)}"
+        else:
+            key = f"fsp_event_{get_key(fcio.config.streamid, 0, 0)}"
+
         if key not in fsp_evt_rbkd:
             return False
         fsp_evt_rb = fsp_evt_rbkd[key]
