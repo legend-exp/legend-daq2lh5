@@ -62,9 +62,11 @@ def extract_header_information(header: OrcaHeader):
         fcid = fc_listener_info["uniqueID"]  # it should be called listener_id
         if fcid == 0:
             raise ValueError("got fcid=0 unexpectedly!")
-        fc_hdr_info["fsp_enabled"][fcid] = header.get_auxhw_info(
-            "ORFlashCamListenerModel", fcid
-        )["fspEnabled"]
+        aux_hw_info = header.get_auxhw_info("ORFlashCamListenerModel", fcid)
+        if "fspEnabled" in aux_hw_info:
+            fc_hdr_info["fsp_enabled"][fcid] = aux_hw_info["fspEnabled"]
+        else:
+            fc_hdr_info["fsp_enabled"][fcid] = False
 
         fc_hdr_info["wf_len"][fcid] = header.get_auxhw_info(
             "ORFlashCamListenerModel", fcid
