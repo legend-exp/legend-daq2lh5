@@ -109,6 +109,7 @@ class ORFCIOConfigDecoder(OrcaDecoder):
     def __init__(self, header: OrcaHeader = None, **kwargs) -> None:
 
         self.decoder = FCConfigDecoder()
+        self.fsp_decoder = None
         self.decoded_values = {}
         self.key_list = {"fc_config": [], "fsp_config": []}
         self.max_rows_in_packet = 0
@@ -179,6 +180,7 @@ class ORFCIOStatusDecoder(OrcaDecoder):
     def __init__(self, header: OrcaHeader = None, **kwargs) -> None:
 
         self.decoder = FCStatusDecoder()
+        self.fsp_decoder = None
         self.decoded_values = {}
         self.key_list = {"fc_status": [], "fsp_status": []}
         self.max_rows_in_packet = 0
