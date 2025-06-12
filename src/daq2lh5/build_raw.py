@@ -28,6 +28,7 @@ def build_raw(
     overwrite: bool = False,
     compass_config_file: str = None,
     hdf5_settings: dict[str, ...] = None,
+    db_dict: dict = None,
     **kwargs,
 ) -> None:
     """Convert data into LEGEND HDF5 raw-tier format.
@@ -230,7 +231,7 @@ def build_raw(
 
     # Write header data
     lh5_store = lh5.LH5Store(keep_open=True)
-    write_to_lh5_and_clear(header_data, lh5_store, **hdf5_settings)
+    write_to_lh5_and_clear(header_data, lh5_store, db_dict, **hdf5_settings)
 
     # Now loop through the data
     n_bytes_last = streamer.n_bytes_read
@@ -255,7 +256,7 @@ def build_raw(
         if log.getEffectiveLevel() <= logging.INFO and n_max < np.inf:
             progress_bar.update(n_read)
 
-        write_to_lh5_and_clear(chunk_list, lh5_store, **hdf5_settings)
+        write_to_lh5_and_clear(chunk_list, lh5_store, db_dict, **hdf5_settings)
 
         if n_max <= 0:
             log.info(f"Wrote {n_max} rows, exiting...")

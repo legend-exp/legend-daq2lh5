@@ -19,6 +19,7 @@ def lh5_buffer_processor(
     overwrite: bool = False,
     out_spec: dict = None,
     proc_file_name: str = None,
+    db_dict: dict = None,
 ) -> None:
     r"""Process raw buffers from an LH5 file.
 
@@ -138,7 +139,9 @@ def lh5_buffer_processor(
                         out_name=out_name,
                         proc_spec=out_spec[decoder_name][group_name]["proc_spec"],
                     )
-                    tmp_table = buffer_processor(rb)
+                    tmp_table = buffer_processor(
+                        rb, db_dict=db_dict[tb] if db_dict is not None else None
+                    )
                     # Update the lgdo_obj to be written to the processed file
                     lgdo_obj = tmp_table
                 else:

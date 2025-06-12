@@ -1350,3 +1350,109 @@ def test_buffer_processor_compression_settings(lgnd_test_data, tmptestdir):
 
     assert presum_wf.attrs["codec"] == "uleb128_zigzag_diff"
     assert window_wf.attrs["codec"] == "radware_sigcompress"
+
+
+def test_db_dict(lgnd_test_data, tmptestdir):
+    # Set up I/O files, including config
+    daq_file = lgnd_test_data.get_path("fcio/L200-comm-20211130-phy-spms.fcio")
+    processed_file = f"{tmptestdir}/L200-comm-test-pass_proc.lh5"
+
+    # test outname key
+    out_spec = {
+        "FCEventDecoder": {
+            "geds": {
+                "key_list": [[52800, 52801]],
+                "out_stream": processed_file,
+                "out_name": "ch{key:05d}/raw",
+                "proc_spec": {
+                    "dsp_config": {
+                        "outputs": [
+                            "presum_rate",
+                            "presummed_waveform",
+                        ],
+                        "processors": {
+                            "presum_rate, presummed_waveform": {
+                                "function": "presum",
+                                "module": "dspeed.processors",
+                                "args": [
+                                    "waveform",
+                                    0,
+                                    "presum_rate",
+                                    "presummed_waveform(shape=len(waveform)/db.presum, period=waveform.period*db.presum, offset=waveform.offset)",
+                                ],
+                                "unit": "ADC",
+                            }
+                        },
+                    },
+                    "drop": ["waveform"],
+                    "dtype_conv": {
+                        "presummed_waveform/values": "uint32",
+                        "presum_rate": "uint16",
+                    },
+                },
+            }
+        }
+    }
+
+    db_dict = {"ch52800/raw": {"presum": 8}, "ch52801/raw": {"presum": 16}}
+
+    # Do the data processing
+    build_raw(in_stream=daq_file, out_spec=out_spec, overwrite=True, db_dict=db_dict)
+    assert (
+        lh5.read("ch52800/raw/presum_rate", processed_file).nda[0]
+        == db_dict["ch52800/raw"]["presum"]
+    )
+    assert (
+        lh5.read("ch52801/raw/presum_rate", processed_file).nda[0]
+        == db_dict["ch52801/raw"]["presum"]
+    )
+
+    # test group key
+    out_spec = {
+        "FCEventDecoder": {
+            "ch{key}": {
+                "key_list": [[52800, 52801]],
+                "out_stream": processed_file + ":{name}",
+                "out_name": "raw",
+                "proc_spec": {
+                    "dsp_config": {
+                        "outputs": [
+                            "presum_rate",
+                            "presummed_waveform",
+                        ],
+                        "processors": {
+                            "presum_rate, presummed_waveform": {
+                                "function": "presum",
+                                "module": "dspeed.processors",
+                                "args": [
+                                    "waveform",
+                                    0,
+                                    "presum_rate",
+                                    "presummed_waveform(shape=len(waveform)/db.presum, period=waveform.period*db.presum, offset=waveform.offset)",
+                                ],
+                                "unit": "ADC",
+                            }
+                        },
+                    },
+                    "drop": ["waveform"],
+                    "dtype_conv": {
+                        "presummed_waveform/values": "uint32",
+                        "presum_rate": "uint16",
+                    },
+                },
+            }
+        }
+    }
+
+    db_dict = {"ch52800": {"presum": 8}, "ch52801": {"presum": 16}}
+
+    # Do the data processing
+    build_raw(in_stream=daq_file, out_spec=out_spec, overwrite=True, db_dict=db_dict)
+    assert (
+        lh5.read("ch52800/raw/presum_rate", processed_file).nda[0]
+        == db_dict["ch52800"]["presum"]
+    )
+    assert (
+        lh5.read("ch52801/raw/presum_rate", processed_file).nda[0]
+        == db_dict["ch52801"]["presum"]
+    )
