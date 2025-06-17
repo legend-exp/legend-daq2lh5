@@ -217,9 +217,9 @@ class ORFCIOStatusDecoder(OrcaDecoder):
 
     def get_decoded_values(self, key: int | str = None) -> dict[str, Any]:
         if key is None:
-            dec_vals_list = list(self.decoded_values.values())
+            dec_vals_list = list(self.decoded_values)
             if len(dec_vals_list) > 0:
-                return dec_vals_list[0]
+                return {dec_vals_list[0]: self.decoded_values[dec_vals_list[0]]}
             raise RuntimeError("decoded_values not built")
 
         if (
@@ -299,6 +299,11 @@ class ORFCIOEventHeaderDecoder(OrcaDecoder):
             fcid = get_fcid(key)
             if fcid in self.decoded_values:
                 return self.decoded_values[fcid]
+        elif key is None and self.fsp_decoder is None:
+            dec_vals_list = list(self.decoded_values.values())
+            if len(dec_vals_list) > 0:
+                return dec_vals_list[0]
+            raise RuntimeError("decoded_values not built")
 
         raise KeyError(f"no decoded values for key {key}")
 
