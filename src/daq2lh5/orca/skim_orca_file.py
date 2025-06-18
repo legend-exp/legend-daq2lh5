@@ -38,8 +38,8 @@ def skim_orca_file() -> None:
         or_streamer.open_stream(args.in_file)
         header_packet = or_streamer.load_packet(0)
 
-        # if out_filename.is_file():
-        #     out_filename.unlink()
+        if out_filename.is_file():
+            out_filename.unlink()
 
         with out_filename.open("ab") as out_file:
             # always write header and first packet (run start)
