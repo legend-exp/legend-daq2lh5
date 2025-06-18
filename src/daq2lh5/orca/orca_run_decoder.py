@@ -18,12 +18,12 @@ class ORRunDecoderForRun(OrcaDecoder):
         # bit in data packet
         self.decoded_values = {
             "subrun_number": {"dtype": "uint16"},
-            "runstartorstop": {"dtype": "bool8"},
-            "quickstartrun": {"dtype": "bool8"},
-            "remotecontrolrun": {"dtype": "bool8"},
-            "heartbeatrecord": {"dtype": "bool8"},
-            "endsubrunrecord": {"dtype": "bool8"},
-            "startsubrunrecord": {"dtype": "bool8"},
+            "runstartorstop": {"dtype": "bool"},
+            "quickstartrun": {"dtype": "bool"},
+            "remotecontrolrun": {"dtype": "bool"},
+            "heartbeatrecord": {"dtype": "bool"},
+            "endsubrunrecord": {"dtype": "bool"},
+            "startsubrunrecord": {"dtype": "bool"},
             "run_number": {"dtype": "int32"},
             "time": {"dtype": "int32"},
         }

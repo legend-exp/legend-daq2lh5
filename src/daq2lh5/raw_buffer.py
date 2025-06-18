@@ -66,6 +66,7 @@ keys.
 
 from __future__ import annotations
 
+import logging
 import os
 
 import lgdo
@@ -73,6 +74,8 @@ from lgdo import LGDO
 from lgdo.lh5 import LH5Store
 
 from .buffer_processor.buffer_processor import buffer_processor
+
+log = logging.getLogger(__name__)
 
 
 class RawBuffer:
@@ -183,6 +186,8 @@ class RawBufferList(list):
             self.keyed_dict = {}
             for rb in self:
                 for key in rb.key_list:
+                    if key in self.keyed_dict:
+                        log.warning(f"Key {key} is duplicate.")
                     self.keyed_dict[key] = rb
         return self.keyed_dict
 
@@ -418,7 +423,7 @@ def expand_rblist_dict(config: dict, kw_dict: dict[str, str]) -> None:
 
 
 def write_to_lh5_and_clear(
-    raw_buffers: list[RawBuffer], lh5_store: LH5Store = None, **kwargs
+    raw_buffers: list[RawBuffer], lh5_store: LH5Store = None, db_dict=None, **kwargs
 ) -> None:
     r"""Write a list of :class:`.RawBuffer`\ s to LH5 files and then clears them.
 
@@ -456,10 +461,18 @@ def write_to_lh5_and_clear(
             if len(group) == 0:
                 group = "/"  # in case out_stream ends with :
 
+        if db_dict is None:
+            database = None
+        elif rb.out_name in db_dict:
+            database = db_dict[rb.out_name]
+        elif group in db_dict:
+            database = db_dict[group]
+        else:
+            database = None
         # If a proc_spec if present for this RawBuffer, process that data and then write to the file!
         if rb.proc_spec is not None:
             # Perform the processing as requested in the `proc_spec` from `out_spec` in build_raw
-            lgdo_to_write = buffer_processor(rb)
+            lgdo_to_write = buffer_processor(rb, db_dict=database)
         else:
             lgdo_to_write = rb.lgdo
 

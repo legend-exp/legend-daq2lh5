@@ -5,7 +5,7 @@ from typing import Any
 
 import numpy as np
 
-from ..fc.fc_event_decoder import fc_decoded_values
+from ..fc.fc_event_decoder import fc_event_decoded_values
 from ..raw_buffer import RawBufferLibrary
 from .orca_base import OrcaDecoder
 from .orca_header import OrcaHeader
@@ -43,7 +43,7 @@ class ORFlashCamListenerConfigDecoder(OrcaDecoder):
             "packet_len": {"dtype": "uint32"},
             "readout_id": {"dtype": "uint16"},
             "fcid": {"dtype": "uint16"},
-            "telid": {"dtype": "int32"},
+            "streamid": {"dtype": "int32"},
             "nadcs": {"dtype": "int32"},
             "ntriggers": {"dtype": "int32"},
             "nsamples": {"dtype": "int32"},
@@ -458,8 +458,8 @@ class ORFlashCamWaveformDecoder(OrcaDecoder):
 
     def __init__(self, header: OrcaHeader = None, **kwargs) -> None:
         # start with the values defined in fcdaq
-        self.decoded_values_template = copy.deepcopy(fc_decoded_values)
-        """A custom copy of :obj:`.fc.fc_event_decoder.fc_decoded_values`."""
+        self.decoded_values_template = copy.deepcopy(fc_event_decoded_values)
+        """A custom copy of :obj:`.fc.fc_event_decoder.fc_event_decoded_values`."""
         # add header values from Orca
         self.decoded_values_template.update(
             {
@@ -737,6 +737,9 @@ class ORFlashCamWaveformDecoder(OrcaDecoder):
         tbl["waveform"]["values"].nda[ii][:wf_samples] = wf
 
         evt_rbkd[key].loc += 1
+        log.info(
+            f"-> {tbl['eventnumber'].nda[ii]} {channel} .. {evt_rbkd[key].loc}/{len(evt_rbkd[key])} {id(evt_rbkd[key])} {id(evt_rbkd[key].lgdo)}"
+        )
         return evt_rbkd[key].is_full()
 
 

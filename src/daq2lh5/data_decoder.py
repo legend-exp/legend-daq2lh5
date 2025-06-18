@@ -253,12 +253,10 @@ class DataDecoder:
     def write_out_garbage(
         self, filename: str, group: str = "/", lh5_store: LH5Store = None
     ) -> None:
-        if lh5_store is None:
-            lh5_store = lgdo.LH5Store()
         n_rows = self.garbage_table.loc
         if n_rows == 0:
             return
-        lh5_store.write(
+        lgdo.lh5.write(
             self.garbage_table, "garbage", filename, group, n_rows=n_rows, append=True
         )
         self.garbage_table.clear()

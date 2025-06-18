@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 
-def buffer_processor(rb: RawBuffer) -> Table:
+def buffer_processor(rb: RawBuffer, db_dict: dict = None) -> Table:
     r"""Process raw data buffers.
 
     Takes in a :class:`.RawBuffer`, performs any processes specified in the
@@ -142,7 +142,7 @@ def buffer_processor(rb: RawBuffer) -> Table:
 
     # Read in and perform the DSP routine
     if "dsp_config" in rb.proc_spec.keys():
-        process_dsp(rb, tmp_table)
+        process_dsp(rb, tmp_table, db_dict)
 
     # Cast as requested dtype before writing to the table
     if "dtype_conv" in rb.proc_spec.keys():
@@ -294,7 +294,7 @@ def process_windowed_t0(t0s: Array, dts: Array, start_index: int) -> Array:
     return copy_t0s
 
 
-def process_dsp(rb: RawBuffer, tmp_table: Table) -> None:
+def process_dsp(rb: RawBuffer, tmp_table: Table, db_dict: dict = None) -> None:
     r"""Run a DSP processing chain with :mod:`dspeed`.
 
     Run a provided DSP config from `rb.proc_spec` using
@@ -309,6 +309,8 @@ def process_dsp(rb: RawBuffer, tmp_table: Table) -> None:
     tmp_table
         a :class:`lgdo.Table` that is temporarily created to be written
         to the raw file.
+    db_dict
+        a database dictionary storing parameters for each channel
 
     Notes
     -----
@@ -322,10 +324,11 @@ def process_dsp(rb: RawBuffer, tmp_table: Table) -> None:
     try:
         # execute the processing chain
         # This checks that the rb.lgdo is a table and that the field_name is present in the table
-        proc_chain, mask, dsp_out = bpc(rb.lgdo, dsp_dict)
+        proc_chain, mask, dsp_out = bpc(rb.lgdo, dsp_dict, db_dict=db_dict)
     # Allow for exceptions, in the case of "*" key expansion in the build_raw out_spec
-    except ProcessingChainError:
+    except ProcessingChainError as e:
         log.info("DSP could not be performed")
+        log.info(f"Error: {e}")
         return None
 
     proc_chain.execute()

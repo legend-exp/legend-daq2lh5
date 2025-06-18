@@ -92,7 +92,6 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
         log.debug(
             f"{self.number_chOpen} channels open, each config {self.length_econf} bytes long"
         )
-
         n_bytes_read += self.__decode_channel_configs(f_in)
 
         # print(self.channel_configs[0]["maw3_offset"])
@@ -151,7 +150,7 @@ class LLAMAHeaderDecoder(DataDecoder):  # DataDecoder currently unused
             # print("reading in channel config {}".format(i))
 
             channel = f_in.read(self.length_econf)
-            n_bytes_read += self.length_econf
+            n_bytes_read += int(self.length_econf)
             ch_dpf = channel[16:32]
             evt_data_32 = np.frombuffer(channel, dtype=np.uint32)
             evt_data_dpf = np.frombuffer(ch_dpf, dtype=np.float64)

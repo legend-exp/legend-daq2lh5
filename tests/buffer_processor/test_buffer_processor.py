@@ -10,10 +10,10 @@ from lgdo import lh5
 from lgdo.compression import RadwareSigcompress, ULEB128ZigZagDiff
 
 from daq2lh5.build_raw import build_raw
-from daq2lh5.fc.fc_event_decoder import fc_decoded_values
+from daq2lh5.fc.fc_event_decoder import fc_event_decoded_values
 
 # skip waveform compression in build_raw
-fc_decoded_values["waveform"].pop("compression", None)
+fc_event_decoded_values["waveform"].pop("compression", None)
 
 config_dir = Path(__file__).parent / "test_buffer_processor_configs"
 
@@ -46,18 +46,16 @@ def test_buffer_processor_packet_ids(lgnd_test_data, tmptestdir):
 
     raw_file = f"{tmptestdir}/L200-comm-20220519-phy-geds.lh5"
 
-    sto = lh5.LH5Store()
-
     raw_group = "ORFlashCamADCWaveform"
-    raw_packet_ids = sto.read(str(raw_group) + "/packet_id", raw_file)
-    processed_packet_ids = sto.read(str(raw_group) + "/packet_id", processed_file)
+    raw_packet_ids = lh5.read(str(raw_group) + "/packet_id", raw_file)
+    processed_packet_ids = lh5.read(str(raw_group) + "/packet_id", processed_file)
 
     assert np.array_equal(raw_packet_ids.nda, processed_packet_ids.nda)
 
-    processed_presummed_wfs = sto.read(
+    processed_presummed_wfs = lh5.read(
         str(raw_group) + "/presummed_waveform/values", processed_file
     )
-    raw_wfs = sto.read(str(raw_group) + "/waveform/values", raw_file)
+    raw_wfs = lh5.read(str(raw_group) + "/waveform/values", raw_file)
     assert processed_presummed_wfs.nda[0][0] == np.sum(raw_wfs.nda[0][:4])
 
 
@@ -71,7 +69,7 @@ def test_buffer_processor_waveform_lengths(lgnd_test_data, tmptestdir):
     out_spec = {
         "FCEventDecoder": {
             "ch{key}": {
-                "key_list": [[0, 6]],
+                "key_list": [[52800, 52806]],
                 "out_stream": processed_file + ":{name}",
                 "out_name": "raw",
                 "proc_spec": {
@@ -105,7 +103,7 @@ def test_buffer_processor_waveform_lengths(lgnd_test_data, tmptestdir):
     copy_out_spec = {
         "FCEventDecoder": {
             "ch{key}": {
-                "key_list": [[0, 6]],
+                "key_list": [[52800, 52806]],
                 "out_stream": raw_file + ":{name}",
                 "out_name": "raw",
             }
@@ -114,7 +112,7 @@ def test_buffer_processor_waveform_lengths(lgnd_test_data, tmptestdir):
 
     build_raw(in_stream=daq_file, out_spec=out_spec, overwrite=True)
 
-    proc_spec = out_spec["FCEventDecoder"]["ch0"].pop("proc_spec")
+    proc_spec = out_spec["FCEventDecoder"]["ch52800"].pop("proc_spec")
     dsp_config = proc_spec["dsp_config"]
     window_config = proc_spec["window"]
 
@@ -142,16 +140,14 @@ def test_buffer_processor_waveform_lengths(lgnd_test_data, tmptestdir):
     window_start_index = window_config[1]
     window_end_index = window_config[2]
 
-    sto = lh5.LH5Store()
-
     for raw_group in lh5_tables:
-        raw_packet_waveform_values = sto.read(
+        raw_packet_waveform_values = lh5.read(
             str(raw_group) + "/waveform/values", raw_file
         )
-        presummed_packet_waveform_values = sto.read(
+        presummed_packet_waveform_values = lh5.read(
             str(raw_group) + "/presummed_waveform/values", processed_file
         )
-        windowed_packet_waveform_values = sto.read(
+        windowed_packet_waveform_values = lh5.read(
             str(raw_group) + "/windowed_waveform/values", processed_file
         )
 
@@ -165,17 +161,17 @@ def test_buffer_processor_waveform_lengths(lgnd_test_data, tmptestdir):
         ) + np.abs(window_start_index) + np.abs(window_end_index)
         assert windowed_packet_waveform_values.dtype == raw_packet_waveform_values.dtype
 
-        raw_packet_waveform_t0s = sto.read(str(raw_group) + "/waveform/t0", raw_file)
-        raw_packet_waveform_dts = sto.read(str(raw_group) + "/waveform/dt", raw_file)
+        raw_packet_waveform_t0s = lh5.read(str(raw_group) + "/waveform/t0", raw_file)
+        raw_packet_waveform_dts = lh5.read(str(raw_group) + "/waveform/dt", raw_file)
 
-        windowed_packet_waveform_t0s = sto.read(
+        windowed_packet_waveform_t0s = lh5.read(
             str(raw_group) + "/windowed_waveform/t0", processed_file
         )
-        presummed_packet_waveform_t0s = sto.read(
+        presummed_packet_waveform_t0s = lh5.read(
             str(raw_group) + "/presummed_waveform/t0", processed_file
         )
 
-        windowed_packet_waveform_dts = sto.read(
+        windowed_packet_waveform_dts = lh5.read(
             str(raw_group) + "/windowed_waveform/dt", processed_file
         )
 
@@ -197,7 +193,7 @@ def test_buffer_processor_waveform_lengths(lgnd_test_data, tmptestdir):
             == raw_packet_waveform_t0s.attrs["units"]
         )
 
-        presummed_packet_waveform_dts = sto.read(
+        presummed_packet_waveform_dts = lh5.read(
             str(raw_group) + "/presummed_waveform/dt", processed_file
         )
 
@@ -211,7 +207,7 @@ def test_buffer_processor_waveform_lengths(lgnd_test_data, tmptestdir):
         )
 
         # Check that the presum_rate is correctly identified
-        presum_rate_from_file = sto.read(
+        presum_rate_from_file = lh5.read(
             str(raw_group) + "/presum_rate", processed_file
         )
         assert presum_rate_from_file.nda[0] == presum_rate
@@ -272,17 +268,17 @@ def test_buffer_processor_file_size_decrease(lgnd_test_data, tmptestdir):
             lh5_tables[i] = f"{tb}/raw"
         elif not lh5.ls(raw_file, tb):
             del lh5_tables[i]
-    sto = lh5.LH5Store()
 
     wf_size = 0
 
     for raw_group in lh5_tables:
-        wf_size += sys.getsizeof(
-            sto.read(str(raw_group) + "/waveform/values", raw_file).nda
-        )
-
-    # Make sure we are taking up not much more space than a file that has two copies of the waveform table in it
-    assert os.path.getsize(processed_file) < (os.path.getsize(raw_file) + wf_size) * 10
+        curr_wf = lh5.read(str(raw_group) + "/waveform/values", raw_file)
+        if hasattr(curr_wf, "_nda"):
+            wf_size += sys.getsizeof(curr_wf._nda)
+        else:
+            wf_size += sys.getsizeof(curr_wf.nda)
+    # Make sure we are taking up less space than a file that has two copies of the waveform table in it
+    assert os.path.getsize(processed_file) < os.path.getsize(raw_file) + wf_size
 
 
 # check that packet indexes match in verification test on file that has both spms and geds
@@ -295,7 +291,7 @@ def test_buffer_processor_separate_name_tables(lgnd_test_data, tmptestdir):
     out_spec = {
         "FCEventDecoder": {
             "geds": {
-                "key_list": [[0, 3]],
+                "key_list": [[52800, 52803]],
                 "out_stream": processed_file + ":{name}",
                 "out_name": "raw",
                 "proc_spec": {
@@ -324,7 +320,7 @@ def test_buffer_processor_separate_name_tables(lgnd_test_data, tmptestdir):
                 },
             },
             "spms": {
-                "key_list": [[3, 6]],
+                "key_list": [[52803, 52806]],
                 "out_stream": processed_file + ":{name}",
                 "out_name": "raw",
                 "proc_spec": {
@@ -358,12 +354,12 @@ def test_buffer_processor_separate_name_tables(lgnd_test_data, tmptestdir):
     copy_out_spec = {
         "FCEventDecoder": {
             "geds": {
-                "key_list": [[0, 3]],
+                "key_list": [[52800, 52803]],
                 "out_stream": raw_file + ":{name}",
                 "out_name": "raw",
             },
             "spms": {
-                "key_list": [[3, 6]],
+                "key_list": [[52803, 52806]],
                 "out_stream": raw_file + ":{name}",
                 "out_name": "raw",
             },
@@ -392,12 +388,10 @@ def test_buffer_processor_separate_name_tables(lgnd_test_data, tmptestdir):
 
     jsonfile = proc_spec
 
-    sto = lh5.LH5Store()
-
     for raw_group in lh5_tables:
         # First, check the packet ids
-        raw_packet_ids = sto.read(str(raw_group) + "/packet_id", raw_file)
-        processed_packet_ids = sto.read(str(raw_group) + "/packet_id", processed_file)
+        raw_packet_ids = lh5.read(str(raw_group) + "/packet_id", raw_file)
+        processed_packet_ids = lh5.read(str(raw_group) + "/packet_id", processed_file)
 
         assert np.array_equal(raw_packet_ids.nda, processed_packet_ids.nda)
 
@@ -414,13 +408,13 @@ def test_buffer_processor_separate_name_tables(lgnd_test_data, tmptestdir):
         window_start_index = int(jsonfile[group_name]["window"][1])
         window_end_index = int(jsonfile[group_name]["window"][2])
 
-        raw_packet_waveform_values = sto.read(
+        raw_packet_waveform_values = lh5.read(
             str(raw_group) + "/waveform/values", raw_file
         )
-        presummed_packet_waveform_values = sto.read(
+        presummed_packet_waveform_values = lh5.read(
             str(raw_group) + "/presummed_waveform/values", processed_file
         )
-        windowed_packet_waveform_values = sto.read(
+        windowed_packet_waveform_values = lh5.read(
             str(raw_group) + "/windowed_waveform/values", processed_file
         )
 
@@ -434,13 +428,13 @@ def test_buffer_processor_separate_name_tables(lgnd_test_data, tmptestdir):
         ) + np.abs(window_start_index) + np.abs(window_end_index)
         assert windowed_packet_waveform_values.dtype == raw_packet_waveform_values.dtype
 
-        raw_packet_waveform_t0s = sto.read(str(raw_group) + "/waveform/t0", raw_file)
-        raw_packet_waveform_dts = sto.read(str(raw_group) + "/waveform/dt", raw_file)
+        raw_packet_waveform_t0s = lh5.read(str(raw_group) + "/waveform/t0", raw_file)
+        raw_packet_waveform_dts = lh5.read(str(raw_group) + "/waveform/dt", raw_file)
 
-        windowed_packet_waveform_t0s = sto.read(
+        windowed_packet_waveform_t0s = lh5.read(
             str(raw_group) + "/windowed_waveform/t0", processed_file
         )
-        presummed_packet_waveform_t0s = sto.read(
+        presummed_packet_waveform_t0s = lh5.read(
             str(raw_group) + "/presummed_waveform/t0", processed_file
         )
 
@@ -460,7 +454,7 @@ def test_buffer_processor_separate_name_tables(lgnd_test_data, tmptestdir):
             == raw_packet_waveform_t0s.attrs["units"]
         )
 
-        presummed_packet_waveform_dts = sto.read(
+        presummed_packet_waveform_dts = lh5.read(
             str(raw_group) + "/presummed_waveform/dt", processed_file
         )
 
@@ -471,7 +465,7 @@ def test_buffer_processor_separate_name_tables(lgnd_test_data, tmptestdir):
         )
 
         # Check that the presum_rate is correctly identified
-        presum_rate_from_file = sto.read(
+        presum_rate_from_file = lh5.read(
             str(raw_group) + "/presum_rate", processed_file
         )
         assert presum_rate_from_file.nda[0] == presum_rate
@@ -486,7 +480,7 @@ def test_proc_geds_no_proc_spms(lgnd_test_data, tmptestdir):
     out_spec = {
         "FCEventDecoder": {
             "geds": {
-                "key_list": [[0, 1]],
+                "key_list": [[52800, 52801]],
                 "out_stream": processed_file + ":{name}",
                 "out_name": "raw",
                 "proc_spec": {
@@ -528,7 +522,7 @@ def test_proc_geds_no_proc_spms(lgnd_test_data, tmptestdir):
                 },
             },
             "spms": {
-                "key_list": [[3, 4]],
+                "key_list": [[52803, 52804]],
                 "out_stream": processed_file + ":{name}",
                 "out_name": "raw",
             },
@@ -538,12 +532,12 @@ def test_proc_geds_no_proc_spms(lgnd_test_data, tmptestdir):
     copy_out_spec = {
         "FCEventDecoder": {
             "geds": {
-                "key_list": [[0, 1]],
+                "key_list": [[52800, 52801]],
                 "out_stream": raw_file + ":{name}",
                 "out_name": "raw",
             },
             "spms": {
-                "key_list": [[3, 4]],
+                "key_list": [[52803, 52804]],
                 "out_stream": raw_file + ":{name}",
                 "out_name": "raw",
             },
@@ -586,12 +580,10 @@ def test_proc_geds_no_proc_spms(lgnd_test_data, tmptestdir):
 
     jsonfile = proc_spec
 
-    sto = lh5.LH5Store()
-
     for raw_group in lh5_tables:
         # First, check the packet ids
-        raw_packet_ids = sto.read(str(raw_group) + "/packet_id", raw_file)
-        processed_packet_ids = sto.read(str(raw_group) + "/packet_id", processed_file)
+        raw_packet_ids = lh5.read(str(raw_group) + "/packet_id", raw_file)
+        processed_packet_ids = lh5.read(str(raw_group) + "/packet_id", processed_file)
 
         assert np.array_equal(raw_packet_ids.nda, processed_packet_ids.nda)
 
@@ -620,21 +612,21 @@ def test_proc_geds_no_proc_spms(lgnd_test_data, tmptestdir):
             window_end_index = int(jsonfile[group_name]["window"][2])
 
         # Read in the waveforms
-        raw_packet_waveform_values = sto.read(
+        raw_packet_waveform_values = lh5.read(
             str(raw_group) + "/waveform/values", raw_file
         )
         if pass_flag:
-            presummed_packet_waveform_values = sto.read(
+            presummed_packet_waveform_values = lh5.read(
                 str(raw_group) + "/waveform/values", processed_file
             )
-            windowed_packet_waveform_values = sto.read(
+            windowed_packet_waveform_values = lh5.read(
                 str(raw_group) + "/waveform/values", processed_file
             )
         else:
-            presummed_packet_waveform_values = sto.read(
+            presummed_packet_waveform_values = lh5.read(
                 str(raw_group) + "/presummed_waveform/values", processed_file
             )
-            windowed_packet_waveform_values = sto.read(
+            windowed_packet_waveform_values = lh5.read(
                 str(raw_group) + "/windowed_waveform/values", processed_file
             )
 
@@ -647,21 +639,21 @@ def test_proc_geds_no_proc_spms(lgnd_test_data, tmptestdir):
         ) + np.abs(window_start_index) + np.abs(window_end_index)
         assert windowed_packet_waveform_values.dtype == raw_packet_waveform_values.dtype
 
-        raw_packet_waveform_t0s = sto.read(str(raw_group) + "/waveform/t0", raw_file)
-        raw_packet_waveform_dts = sto.read(str(raw_group) + "/waveform/dt", raw_file)
+        raw_packet_waveform_t0s = lh5.read(str(raw_group) + "/waveform/t0", raw_file)
+        raw_packet_waveform_dts = lh5.read(str(raw_group) + "/waveform/dt", raw_file)
 
         if pass_flag:
-            windowed_packet_waveform_t0s = sto.read(
+            windowed_packet_waveform_t0s = lh5.read(
                 str(raw_group) + "/waveform/t0", processed_file
             )
-            presummed_packet_waveform_t0s = sto.read(
+            presummed_packet_waveform_t0s = lh5.read(
                 str(raw_group) + "/waveform/t0", processed_file
             )
         else:
-            windowed_packet_waveform_t0s = sto.read(
+            windowed_packet_waveform_t0s = lh5.read(
                 str(raw_group) + "/windowed_waveform/t0", processed_file
             )
-            presummed_packet_waveform_t0s = sto.read(
+            presummed_packet_waveform_t0s = lh5.read(
                 str(raw_group) + "/presummed_waveform/t0", processed_file
             )
 
@@ -682,16 +674,16 @@ def test_proc_geds_no_proc_spms(lgnd_test_data, tmptestdir):
         )
 
         if pass_flag:
-            presummed_packet_waveform_dts = sto.read(
+            presummed_packet_waveform_dts = lh5.read(
                 str(raw_group) + "/waveform/dt", processed_file
             )
         else:
-            presummed_packet_waveform_dts = sto.read(
+            presummed_packet_waveform_dts = lh5.read(
                 str(raw_group) + "/presummed_waveform/dt", processed_file
             )
 
             # Check that the presum_rate is correctly identified
-            presum_rate_from_file = sto.read(
+            presum_rate_from_file = lh5.read(
                 str(raw_group) + "/presum_rate", processed_file
             )
             assert presum_rate_from_file.nda[0] == presum_rate
@@ -703,15 +695,15 @@ def test_proc_geds_no_proc_spms(lgnd_test_data, tmptestdir):
 
         # check that the t_lo_sat and t_sat_hi are correct
         if not pass_flag:
-            wf_table = sto.read(str(raw_group), raw_file)
+            wf_table = lh5.read(str(raw_group), raw_file)
             pc, _, wf_out = bpc(wf_table, json.loads(raw_dsp_config))
             pc.execute()
             raw_sat_lo = wf_out["t_sat_lo"]
             raw_sat_hi = wf_out["t_sat_hi"]
 
-            proc_sat_lo = sto.read(str(raw_group) + "/t_sat_lo", processed_file)
+            proc_sat_lo = lh5.read(str(raw_group) + "/t_sat_lo", processed_file)
 
-            proc_sat_hi = sto.read(str(raw_group) + "/t_sat_hi", processed_file)
+            proc_sat_hi = lh5.read(str(raw_group) + "/t_sat_hi", processed_file)
 
             assert np.array_equal(raw_sat_lo.nda, proc_sat_lo.nda)
             assert np.array_equal(raw_sat_hi.nda, proc_sat_hi.nda)
@@ -829,12 +821,10 @@ def test_buffer_processor_multiple_keys(lgnd_test_data, tmptestdir):
 
     jsonfile = proc_spec
 
-    sto = lh5.LH5Store()
-
     for raw_group in lh5_tables:
         # First, check the packet ids
-        raw_packet_ids = sto.read(str(raw_group) + "/packet_id", raw_file)
-        processed_packet_ids = sto.read(str(raw_group) + "/packet_id", processed_file)
+        raw_packet_ids = lh5.read(str(raw_group) + "/packet_id", raw_file)
+        processed_packet_ids = lh5.read(str(raw_group) + "/packet_id", processed_file)
 
         assert np.array_equal(raw_packet_ids.nda, processed_packet_ids.nda)
 
@@ -864,21 +854,21 @@ def test_buffer_processor_multiple_keys(lgnd_test_data, tmptestdir):
             window_end_index = int(jsonfile[group_name]["window"][2])
 
         # Read in the waveforms
-        raw_packet_waveform_values = sto.read(
+        raw_packet_waveform_values = lh5.read(
             str(raw_group) + "/waveform/values", raw_file
         )
         if pass_flag:
-            presummed_packet_waveform_values = sto.read(
+            presummed_packet_waveform_values = lh5.read(
                 str(raw_group) + "/waveform/values", processed_file
             )
-            windowed_packet_waveform_values = sto.read(
+            windowed_packet_waveform_values = lh5.read(
                 str(raw_group) + "/waveform/values", processed_file
             )
         else:
-            presummed_packet_waveform_values = sto.read(
+            presummed_packet_waveform_values = lh5.read(
                 str(raw_group) + "/presummed_waveform/values", processed_file
             )
-            windowed_packet_waveform_values = sto.read(
+            windowed_packet_waveform_values = lh5.read(
                 str(raw_group) + "/windowed_waveform/values", processed_file
             )
 
@@ -896,20 +886,20 @@ def test_buffer_processor_multiple_keys(lgnd_test_data, tmptestdir):
         # Check that the waveforms match
         # These are the channels that should be unprocessed
         if group_name == "chan1028803" or group_name == "chan1028804":
-            raw_packet_waveform_values = sto.read(
+            raw_packet_waveform_values = lh5.read(
                 str(raw_group) + "/waveform/values", raw_file
             )
-            windowed_packet_waveform_values = sto.read(
+            windowed_packet_waveform_values = lh5.read(
                 str(raw_group) + "/waveform/values", processed_file
             )
             assert np.array_equal(
                 raw_packet_waveform_values.nda, windowed_packet_waveform_values.nda
             )
         else:
-            raw_packet_waveform_values = sto.read(
+            raw_packet_waveform_values = lh5.read(
                 str(raw_group) + "/waveform/values", raw_file
             )
-            windowed_packet_waveform_values = sto.read(
+            windowed_packet_waveform_values = lh5.read(
                 str(raw_group) + "/windowed_waveform/values", processed_file
             )
             assert np.array_equal(
@@ -918,21 +908,21 @@ def test_buffer_processor_multiple_keys(lgnd_test_data, tmptestdir):
             )
 
         # Check the t0 and dts are what we expect
-        raw_packet_waveform_t0s = sto.read(str(raw_group) + "/waveform/t0", raw_file)
-        raw_packet_waveform_dts = sto.read(str(raw_group) + "/waveform/dt", raw_file)
+        raw_packet_waveform_t0s = lh5.read(str(raw_group) + "/waveform/t0", raw_file)
+        raw_packet_waveform_dts = lh5.read(str(raw_group) + "/waveform/dt", raw_file)
 
         if pass_flag:
-            windowed_packet_waveform_t0s = sto.read(
+            windowed_packet_waveform_t0s = lh5.read(
                 str(raw_group) + "/waveform/t0", processed_file
             )
-            presummed_packet_waveform_t0s = sto.read(
+            presummed_packet_waveform_t0s = lh5.read(
                 str(raw_group) + "/waveform/t0", processed_file
             )
         else:
-            windowed_packet_waveform_t0s = sto.read(
+            windowed_packet_waveform_t0s = lh5.read(
                 str(raw_group) + "/windowed_waveform/t0", processed_file
             )
-            presummed_packet_waveform_t0s = sto.read(
+            presummed_packet_waveform_t0s = lh5.read(
                 str(raw_group) + "/presummed_waveform/t0", processed_file
             )
 
@@ -953,16 +943,16 @@ def test_buffer_processor_multiple_keys(lgnd_test_data, tmptestdir):
         )
 
         if pass_flag:
-            presummed_packet_waveform_dts = sto.read(
+            presummed_packet_waveform_dts = lh5.read(
                 str(raw_group) + "/waveform/dt", processed_file
             )
         else:
-            presummed_packet_waveform_dts = sto.read(
+            presummed_packet_waveform_dts = lh5.read(
                 str(raw_group) + "/presummed_waveform/dt", processed_file
             )
 
             # Check that the presum_rate is correctly identified
-            presum_rate_from_file = sto.read(
+            presum_rate_from_file = lh5.read(
                 str(raw_group) + "/presum_rate", processed_file
             )
             assert presum_rate_from_file.nda[0] == presum_rate
@@ -974,15 +964,15 @@ def test_buffer_processor_multiple_keys(lgnd_test_data, tmptestdir):
 
         # check that the t_lo_sat and t_sat_hi are correct
         if not pass_flag:
-            wf_table = sto.read(str(raw_group), raw_file)
+            wf_table = lh5.read(str(raw_group), raw_file)
             pc, _, wf_out = bpc(wf_table, json.loads(raw_dsp_config))
             pc.execute()
             raw_sat_lo = wf_out["t_sat_lo"]
             raw_sat_hi = wf_out["t_sat_hi"]
 
-            proc_sat_lo = sto.read(str(raw_group) + "/t_sat_lo", processed_file)
+            proc_sat_lo = lh5.read(str(raw_group) + "/t_sat_lo", processed_file)
 
-            proc_sat_hi = sto.read(str(raw_group) + "/t_sat_hi", processed_file)
+            proc_sat_hi = lh5.read(str(raw_group) + "/t_sat_hi", processed_file)
 
             assert np.array_equal(raw_sat_lo.nda, proc_sat_lo.nda)
             assert np.array_equal(raw_sat_hi.nda, proc_sat_hi.nda)
@@ -1016,11 +1006,10 @@ def test_buffer_processor_all_pass(lgnd_test_data, tmptestdir):
     build_raw(in_stream=daq_file, out_spec=raw_out_spec, overwrite=True)
 
     # assert filecmp.cmp(raw_file, processed_file, shallow=True)
-    sto = lh5.LH5Store()
     raw_tables = lh5.ls(raw_file)
     for tb in raw_tables:
-        raw = sto.read(tb, raw_file)
-        proc = sto.read(tb, processed_file)
+        raw = lh5.read(tb, raw_file)
+        proc = lh5.read(tb, processed_file)
 
         if isinstance(raw, lgdo.Struct):
             for obj in raw:
@@ -1140,12 +1129,10 @@ def test_buffer_processor_drop_waveform_small_buffer(lgnd_test_data, tmptestdir)
 
     jsonfile = proc_spec
 
-    sto = lh5.LH5Store()
-
     for raw_group in lh5_tables:
         # First, check the packet ids
-        raw_packet_ids = sto.read(str(raw_group) + "/packet_id", raw_file)
-        processed_packet_ids = sto.read(str(raw_group) + "/packet_id", processed_file)
+        raw_packet_ids = lh5.read(str(raw_group) + "/packet_id", raw_file)
+        processed_packet_ids = lh5.read(str(raw_group) + "/packet_id", processed_file)
 
         assert np.array_equal(raw_packet_ids.nda, processed_packet_ids.nda)
 
@@ -1175,21 +1162,21 @@ def test_buffer_processor_drop_waveform_small_buffer(lgnd_test_data, tmptestdir)
             window_end_index = int(jsonfile[group_name]["window"][2])
 
         # Read in the waveforms
-        raw_packet_waveform_values = sto.read(
+        raw_packet_waveform_values = lh5.read(
             str(raw_group) + "/waveform/values", raw_file
         )
         if pass_flag:
-            presummed_packet_waveform_values = sto.read(
+            presummed_packet_waveform_values = lh5.read(
                 str(raw_group) + "/waveform/values", processed_file
             )
-            windowed_packet_waveform_values = sto.read(
+            windowed_packet_waveform_values = lh5.read(
                 str(raw_group) + "/waveform/values", processed_file
             )
         else:
-            presummed_packet_waveform_values = sto.read(
+            presummed_packet_waveform_values = lh5.read(
                 str(raw_group) + "/presummed_waveform/values", processed_file
             )
-            windowed_packet_waveform_values = sto.read(
+            windowed_packet_waveform_values = lh5.read(
                 str(raw_group) + "/windowed_waveform/values", processed_file
             )
 
@@ -1207,20 +1194,20 @@ def test_buffer_processor_drop_waveform_small_buffer(lgnd_test_data, tmptestdir)
         # Check that the waveforms match
         # These are the channels that should be unprocessed
         if group_name == "chan1028803" or group_name == "chan1028804":
-            raw_packet_waveform_values = sto.read(
+            raw_packet_waveform_values = lh5.read(
                 str(raw_group) + "/waveform/values", raw_file
             )
-            windowed_packet_waveform_values = sto.read(
+            windowed_packet_waveform_values = lh5.read(
                 str(raw_group) + "/waveform/values", processed_file
             )
             assert np.array_equal(
                 raw_packet_waveform_values.nda, windowed_packet_waveform_values.nda
             )
         else:
-            raw_packet_waveform_values = sto.read(
+            raw_packet_waveform_values = lh5.read(
                 str(raw_group) + "/waveform/values", raw_file
             )
-            windowed_packet_waveform_values = sto.read(
+            windowed_packet_waveform_values = lh5.read(
                 str(raw_group) + "/windowed_waveform/values", processed_file
             )
             assert np.array_equal(
@@ -1229,21 +1216,21 @@ def test_buffer_processor_drop_waveform_small_buffer(lgnd_test_data, tmptestdir)
             )
 
         # Check the t0 and dts are what we expect
-        raw_packet_waveform_t0s = sto.read(str(raw_group) + "/waveform/t0", raw_file)
-        raw_packet_waveform_dts = sto.read(str(raw_group) + "/waveform/dt", raw_file)
+        raw_packet_waveform_t0s = lh5.read(str(raw_group) + "/waveform/t0", raw_file)
+        raw_packet_waveform_dts = lh5.read(str(raw_group) + "/waveform/dt", raw_file)
 
         if pass_flag:
-            windowed_packet_waveform_t0s = sto.read(
+            windowed_packet_waveform_t0s = lh5.read(
                 str(raw_group) + "/waveform/t0", processed_file
             )
-            presummed_packet_waveform_t0s = sto.read(
+            presummed_packet_waveform_t0s = lh5.read(
                 str(raw_group) + "/waveform/t0", processed_file
             )
         else:
-            windowed_packet_waveform_t0s = sto.read(
+            windowed_packet_waveform_t0s = lh5.read(
                 str(raw_group) + "/windowed_waveform/t0", processed_file
             )
-            presummed_packet_waveform_t0s = sto.read(
+            presummed_packet_waveform_t0s = lh5.read(
                 str(raw_group) + "/presummed_waveform/t0", processed_file
             )
 
@@ -1264,16 +1251,16 @@ def test_buffer_processor_drop_waveform_small_buffer(lgnd_test_data, tmptestdir)
         )
 
         if pass_flag:
-            presummed_packet_waveform_dts = sto.read(
+            presummed_packet_waveform_dts = lh5.read(
                 str(raw_group) + "/waveform/dt", processed_file
             )
         else:
-            presummed_packet_waveform_dts = sto.read(
+            presummed_packet_waveform_dts = lh5.read(
                 str(raw_group) + "/presummed_waveform/dt", processed_file
             )
 
             # Check that the presum_rate is correctly identified
-            presum_rate_from_file = sto.read(
+            presum_rate_from_file = lh5.read(
                 str(raw_group) + "/presum_rate", processed_file
             )
             assert presum_rate_from_file.nda[0] == presum_rate
@@ -1285,15 +1272,15 @@ def test_buffer_processor_drop_waveform_small_buffer(lgnd_test_data, tmptestdir)
 
         # check that the t_lo_sat and t_sat_hi are correct
         if not pass_flag:
-            wf_table = sto.read(str(raw_group), raw_file)
+            wf_table = lh5.read(str(raw_group), raw_file)
             pc, _, wf_out = bpc(wf_table, json.loads(raw_dsp_config))
             pc.execute()
             raw_sat_lo = wf_out["t_sat_lo"]
             raw_sat_hi = wf_out["t_sat_hi"]
 
-            proc_sat_lo = sto.read(str(raw_group) + "/t_sat_lo", processed_file)
+            proc_sat_lo = lh5.read(str(raw_group) + "/t_sat_lo", processed_file)
 
-            proc_sat_hi = sto.read(str(raw_group) + "/t_sat_hi", processed_file)
+            proc_sat_hi = lh5.read(str(raw_group) + "/t_sat_hi", processed_file)
 
             assert np.array_equal(raw_sat_lo.nda, proc_sat_lo.nda)
             assert np.array_equal(raw_sat_hi.nda, proc_sat_hi.nda)
@@ -1309,7 +1296,7 @@ def test_buffer_processor_compression_settings(lgnd_test_data, tmptestdir):
     out_spec = {
         "FCEventDecoder": {
             "ch{key}": {
-                "key_list": [[0, 6]],
+                "key_list": [[52800, 52806]],
                 "out_stream": processed_file + ":{name}",
                 "out_name": "raw",
                 "proc_spec": {
@@ -1351,12 +1338,11 @@ def test_buffer_processor_compression_settings(lgnd_test_data, tmptestdir):
 
     build_raw(in_stream=daq_file, out_spec=out_spec, overwrite=True)
 
-    sto = lh5.LH5Store()
-    presum_wf = sto.read(
-        "/ch0/raw/presummed_waveform/values", processed_file, decompress=False
+    presum_wf = lh5.read(
+        "/ch52800/raw/presummed_waveform/values", processed_file, decompress=False
     )
-    window_wf = sto.read(
-        "/ch0/raw/windowed_waveform/values", processed_file, decompress=False
+    window_wf = lh5.read(
+        "/ch52800/raw/windowed_waveform/values", processed_file, decompress=False
     )
 
     assert isinstance(presum_wf, lgdo.ArrayOfEncodedEqualSizedArrays)
@@ -1364,3 +1350,109 @@ def test_buffer_processor_compression_settings(lgnd_test_data, tmptestdir):
 
     assert presum_wf.attrs["codec"] == "uleb128_zigzag_diff"
     assert window_wf.attrs["codec"] == "radware_sigcompress"
+
+
+def test_db_dict(lgnd_test_data, tmptestdir):
+    # Set up I/O files, including config
+    daq_file = lgnd_test_data.get_path("fcio/L200-comm-20211130-phy-spms.fcio")
+    processed_file = f"{tmptestdir}/L200-comm-test-pass_proc.lh5"
+
+    # test outname key
+    out_spec = {
+        "FCEventDecoder": {
+            "geds": {
+                "key_list": [[52800, 52801]],
+                "out_stream": processed_file,
+                "out_name": "ch{key:05d}/raw",
+                "proc_spec": {
+                    "dsp_config": {
+                        "outputs": [
+                            "presum_rate",
+                            "presummed_waveform",
+                        ],
+                        "processors": {
+                            "presum_rate, presummed_waveform": {
+                                "function": "presum",
+                                "module": "dspeed.processors",
+                                "args": [
+                                    "waveform",
+                                    0,
+                                    "presum_rate",
+                                    "presummed_waveform(shape=len(waveform)/db.presum, period=waveform.period*db.presum, offset=waveform.offset)",
+                                ],
+                                "unit": "ADC",
+                            }
+                        },
+                    },
+                    "drop": ["waveform"],
+                    "dtype_conv": {
+                        "presummed_waveform/values": "uint32",
+                        "presum_rate": "uint16",
+                    },
+                },
+            }
+        }
+    }
+
+    db_dict = {"ch52800/raw": {"presum": 8}, "ch52801/raw": {"presum": 16}}
+
+    # Do the data processing
+    build_raw(in_stream=daq_file, out_spec=out_spec, overwrite=True, db_dict=db_dict)
+    assert (
+        lh5.read("ch52800/raw/presum_rate", processed_file).nda[0]
+        == db_dict["ch52800/raw"]["presum"]
+    )
+    assert (
+        lh5.read("ch52801/raw/presum_rate", processed_file).nda[0]
+        == db_dict["ch52801/raw"]["presum"]
+    )
+
+    # test group key
+    out_spec = {
+        "FCEventDecoder": {
+            "ch{key}": {
+                "key_list": [[52800, 52801]],
+                "out_stream": processed_file + ":{name}",
+                "out_name": "raw",
+                "proc_spec": {
+                    "dsp_config": {
+                        "outputs": [
+                            "presum_rate",
+                            "presummed_waveform",
+                        ],
+                        "processors": {
+                            "presum_rate, presummed_waveform": {
+                                "function": "presum",
+                                "module": "dspeed.processors",
+                                "args": [
+                                    "waveform",
+                                    0,
+                                    "presum_rate",
+                                    "presummed_waveform(shape=len(waveform)/db.presum, period=waveform.period*db.presum, offset=waveform.offset)",
+                                ],
+                                "unit": "ADC",
+                            }
+                        },
+                    },
+                    "drop": ["waveform"],
+                    "dtype_conv": {
+                        "presummed_waveform/values": "uint32",
+                        "presum_rate": "uint16",
+                    },
+                },
+            }
+        }
+    }
+
+    db_dict = {"ch52800": {"presum": 8}, "ch52801": {"presum": 16}}
+
+    # Do the data processing
+    build_raw(in_stream=daq_file, out_spec=out_spec, overwrite=True, db_dict=db_dict)
+    assert (
+        lh5.read("ch52800/raw/presum_rate", processed_file).nda[0]
+        == db_dict["ch52800"]["presum"]
+    )
+    assert (
+        lh5.read("ch52801/raw/presum_rate", processed_file).nda[0]
+        == db_dict["ch52801"]["presum"]
+    )

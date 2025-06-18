@@ -5,7 +5,8 @@ import struct
 from collections import Counter
 from io import BytesIO
 
-from lgdo.lh5 import LH5Store
+import lgdo.lh5 as lh5
+import numpy as np
 
 from daq2lh5 import build_raw
 from daq2lh5.orca import orca_streamer
@@ -25,7 +26,6 @@ class OrcaEncoder:
     def encode_header(self):
         """Convert orca header back to a byte string."""
 
-        lh5 = LH5Store()
         test_file = lh5.read(
             "OrcaHeader",
             self.file,
@@ -64,7 +64,6 @@ class OrcaEncoder:
     def encode_orflashcamconfig(self, ii):
         """Convert orca flashcam config data back to byte strings."""
 
-        lh5 = LH5Store()
         tbl = lh5.read(
             "ORFlashCamListenerConfig",
             self.file,
@@ -72,7 +71,9 @@ class OrcaEncoder:
 
         packets = []
         packets.append(4 << 18)
-        packets.append((tbl["readout_id"].nda[ii] << 16) + tbl["fcid"].nda[ii])
+        packets.append(
+            (tbl["readout_id"].nda[ii].astype("uint32") << 16) + tbl["fcid"].nda[ii]
+        )
 
         decoded_values = ORFlashCamListenerConfigDecoder().get_decoded_values()
 
@@ -91,19 +92,17 @@ class OrcaEncoder:
         for jj in range(npacks):
             board_id = tbl["ch_board_id"].flattened_data.nda[bvi0 + jj]
             fc_input = tbl["ch_inputnum"].flattened_data.nda[bvi0 + jj]
-            packets.append((board_id << 16) + fc_input)
+            packets.append((board_id.astype("uint32") << 16) + fc_input)
 
         while len(packets) < tbl["packet_len"].nda[ii]:
             packets.append(0)
-
+        #
         packets[0] += len(packets)
-
         return packets
 
     def encode_orflashcamadcwaveform(self, ii):
         """Convert orca flashcam ADC waveform data back to byte strings."""
 
-        lh5 = LH5Store()
         tbl = lh5.read(
             "ORFlashCamADCWaveform",
             self.file,
@@ -118,12 +117,14 @@ class OrcaEncoder:
         packets[1] += orca_header_length << 28
         packets[1] += fcio_header_length << 22
 
-        packet3 = 0
+        packet3 = np.uint32(0)
         packet3 += tbl["channel"].nda[ii]
-        packet3 += tbl["fc_input"].nda[ii] << 10
-        packet3 += (tbl["board_id"].nda[ii] & 0xFF) << 14  # old bad board_id encoding
-        packet3 += tbl["slot"].nda[ii] << 22
-        packet3 += tbl["crate"].nda[ii] << 27
+        packet3 += tbl["fc_input"].nda[ii].astype("uint32") << 10
+        packet3 += (tbl["board_id"].nda[ii] & 0xFF).astype(
+            "uint32"
+        ) << 14  # old bad board_id encoding
+        packet3 += tbl["slot"].nda[ii].astype("uint32") << 22
+        packet3 += tbl["crate"].nda[ii].astype("uint32") << 27
         packets.append(packet3)
 
         # time offsets
@@ -148,11 +149,13 @@ class OrcaEncoder:
         packets.append(tbl["ts_ticks"].nda[ii])
         packets.append(tbl["ts_maxticks"].nda[ii])
 
-        packets.append(tbl["baseline"].nda[ii] + (tbl["daqenergy"].nda[ii] << 16))
+        packets.append(
+            tbl["baseline"].nda[ii] + (tbl["daqenergy"].nda[ii].astype("uint32") << 16)
+        )
 
         packets.extend(
             [
-                xx + (yy << 16)
+                xx + (yy.astype("uint32") << 16)
                 for xx, yy in zip(
                     tbl["waveform"]["values"].nda[ii, ::2],
                     tbl["waveform"]["values"].nda[ii, 1::2],
@@ -170,7 +173,6 @@ class OrcaEncoder:
     def encode_orrun(self, ii):
         """Convert orca run data back to byte strings."""
 
-        lh5 = LH5Store()
         tbl = lh5.read(
             "ORRunDecoderForRun",
             self.file,
@@ -206,11 +208,16 @@ def test_daq_to_raw(lgnd_test_data, tmptestdir):
         overwrite=True,
     )
 
+    # load the original raw orca file as a byte string
+    with open(orca_file, "rb") as ff:
+        orig_orca_data = ff.read()
+
     # recreate the header
     encoder = OrcaEncoder(out_spec)
     encoder.encode_header()
 
     rebuilt_orca_data = encoder.header
+    assert rebuilt_orca_data == orig_orca_data[: len(rebuilt_orca_data)]
 
     # get the order of all of the data IDs
     orstr = orca_streamer.OrcaStreamer()
@@ -231,6 +238,7 @@ def test_daq_to_raw(lgnd_test_data, tmptestdir):
     full_count = Counter(data_ids)
     buffer_count = {k: 0 for k in full_count}
 
+    prev = len(rebuilt_orca_data)
     # build the raw orca file in the order of data IDs
     for dd in data_ids:
         buffer_count[dd] += 1
@@ -246,10 +254,13 @@ def test_daq_to_raw(lgnd_test_data, tmptestdir):
             raise ValueError(f"Encoder does not exist for data ID {dd}")
 
         rebuilt_orca_data += struct.pack(f"{len(this_packet)}I", *this_packet)
-
-    # load the original raw orca file as a byte string
-    with open(orca_file, "rb") as ff:
-        orig_orca_data = ff.read()
+        for i in range(len(rebuilt_orca_data) - prev):
+            assert rebuilt_orca_data[prev + i] == orig_orca_data[prev + i], (
+                f"Byte mismatch at index {prev + i} / {i} :"
+                f"{rebuilt_orca_data[prev + i]} != {orig_orca_data[prev + i]}"
+            )
+        assert rebuilt_orca_data[prev:] == orig_orca_data[prev : len(rebuilt_orca_data)]
+        prev = len(rebuilt_orca_data)
 
     # assert the byte strings are the same
     assert len(rebuilt_orca_data) == len(orig_orca_data)
