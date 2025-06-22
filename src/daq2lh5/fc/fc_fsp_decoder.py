@@ -8,7 +8,6 @@ import numpy as np
 from fcio import FCIO, Limits
 
 from ..data_decoder import DataDecoder
-from .fc_eventheader_decoder import get_key
 
 fsp_config_decoded_values = {
     "packet_id": {
@@ -183,7 +182,7 @@ class FSPConfigDecoder(DataDecoder):
         self.key_list = []
 
     def set_fcio_stream(self, fcio_stream: FCIO) -> None:
-        self.key_list = [f"fsp_config_{get_key(fcio_stream.config.streamid, 0, 0)}"]
+        self.key_list = [f"swtid_{fcio_stream.config.streamid & 0xFFFF}/config"]
         if fcio_stream.fsp is not None:
             wps_n_traces = fcio_stream.fsp.config.wps["tracemap"]["n_mapped"]
             hwm_n_traces = fcio_stream.fsp.config.hwm["tracemap"]["n_mapped"]
@@ -694,7 +693,7 @@ class FSPStatusDecoder(DataDecoder):
         self.key_list = []
 
     def set_fcio_stream(self, fcio_stream: FCIO) -> None:
-        self.key_list = [f"fsp_status_{get_key(fcio_stream.config.streamid, 0, 0)}"]
+        self.key_list = [f"swtid_{fcio_stream.config.streamid & 0xFFFF}/status"]
 
     def get_key_lists(self) -> list[list[int | str]]:
         return [copy.deepcopy(self.key_list)]
@@ -709,7 +708,7 @@ class FSPStatusDecoder(DataDecoder):
         packet_id: int,
     ) -> bool:
 
-        key = f"fsp_status_{get_key(fcio.config.streamid, 0, 0)}"
+        key = f"swtid_{fcio.config.streamid & 0xFFFF}/status"
         if key not in fsp_status_rbkd:
             return False
         fsp_status_rb = fsp_status_rbkd[key]
@@ -796,8 +795,8 @@ class FSPEventDecoder(DataDecoder):
     def set_fcio_stream(self, fcio_stream: FCIO) -> None:
 
         self.key_list = [
-            f"fsp_event_{get_key(fcio_stream.config.streamid, 0, 0)}",
-            f"fsp_eventheader_{get_key(fcio_stream.config.streamid, 0, 0)}",
+            f"swtid_{fcio_stream.config.streamid & 0xFFFF}/event",
+            f"swtid_{fcio_stream.config.streamid & 0xFFFF}/evt_hdr",
         ]
 
     def get_decoded_values(self, key: int = None) -> dict[str, dict[str, Any]]:
@@ -815,9 +814,9 @@ class FSPEventDecoder(DataDecoder):
     ) -> bool:
 
         if is_header:
-            key = f"fsp_eventheader_{get_key(fcio.config.streamid, 0, 0)}"
+            key = f"swtid_{fcio.config.streamid & 0xFFFF}/evt_hdr"
         else:
-            key = f"fsp_event_{get_key(fcio.config.streamid, 0, 0)}"
+            key = f"swtid_{fcio.config.streamid & 0xFFFF}/event"
 
         if key not in fsp_evt_rbkd:
             return False

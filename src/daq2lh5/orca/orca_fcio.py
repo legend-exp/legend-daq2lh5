@@ -129,11 +129,11 @@ class ORFCIOConfigDecoder(OrcaDecoder):
         self.decoded_values = copy.deepcopy(self.decoder.get_decoded_values())
 
         for fcid in self.fc_hdr_info["fsp_enabled"]:
-            key = get_key(fcid, 0, 0)
+            key = fcid
             self.key_list["fc_config"].append(key)
             if self.fc_hdr_info["fsp_enabled"][fcid]:
                 self.fsp_decoder = FSPConfigDecoder()
-                self.key_list["fsp_config"].append(f"fsp_config_{key}")
+                self.key_list["fsp_config"].append(f"swtid_{key}")
         self.max_rows_in_packet = 1
 
     def get_key_lists(self) -> list[list[int, str]]:
@@ -165,12 +165,12 @@ class ORFCIOConfigDecoder(OrcaDecoder):
         config_rbkd = rbl.get_keyed_dict()
 
         # TODO: the decoders could fetch lgdo's using it's key_list
-        fc_key = get_key(fcio_stream.config.streamid, 0, 0)
+        fc_key = fcio_stream.config.streamid & 0xFFFF
         any_full = self.decoder.decode_packet(
             fcio_stream, config_rbkd[fc_key], packet_id
         )
         if self.fsp_decoder is not None:
-            fsp_key = f"fsp_config_{get_key(fcio_stream.config.streamid, 0, 0)}"
+            fsp_key = f"fsp_config_{fcio_stream.config.streamid & 0xFFFF}"
             any_full |= self.fsp_decoder.decode_packet(
                 fcio_stream, config_rbkd[fsp_key], packet_id
             )
@@ -208,7 +208,7 @@ class ORFCIOStatusDecoder(OrcaDecoder):
 
             if self.fc_hdr_info["fsp_enabled"][fcid]:
                 key = get_key(fcid, 0, 0)
-                self.key_list["fsp_status"].append(f"fsp_status_{key}")
+                self.key_list["fsp_status"].append(f"swtid_{key}")
                 self.fsp_decoder = FSPStatusDecoder()
         self.max_rows_in_packet = max(self.fc_hdr_info["n_card"].values()) + 1
 
@@ -276,12 +276,12 @@ class ORFCIOEventHeaderDecoder(OrcaDecoder):
 
         key_list = self.fc_hdr_info["key_list"]
         for fcid in key_list:
-            key = get_key(fcid, 0, 0)
+            key = fcid
             self.key_list["fc_eventheader"].append(key)
             self.decoded_values[fcid] = copy.deepcopy(self.decoder.get_decoded_values())
             if self.fc_hdr_info["fsp_enabled"][fcid]:
                 self.fsp_decoder = FSPEventDecoder()
-                self.key_list["fsp_eventheader"].append(f"fsp_eventheader_{key}")
+                self.key_list["fsp_eventheader"].append(f"swtid_{key}")
 
         self.max_rows_in_packet = 1
 
@@ -353,8 +353,8 @@ class ORFCIOEventDecoder(OrcaDecoder):
                 "wf_len"
             ][fcid]
             if self.fc_hdr_info["fsp_enabled"][fcid]:
-                key = get_key(fcid, 0, 0)
-                self.key_list["fsp_event"].append(f"fsp_event_{key}")
+                key = fcid
+                self.key_list["fsp_event"].append(f"swtid_{key}")
                 self.fsp_decoder = FSPEventDecoder()
         self.max_rows_in_packet = max(self.fc_hdr_info["n_adc"].values())
 
