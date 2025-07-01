@@ -129,20 +129,20 @@ class ORFCIOConfigDecoder(OrcaDecoder):
         self.decoded_values = copy.deepcopy(self.decoder.get_decoded_values())
 
         for fcid in self.fc_hdr_info["fsp_enabled"]:
-            key = fcid
-            self.key_list["fc_config"].append(key)
+            self.key_list["fc_config"].append(f"fcid_{fcid}/config")
             if self.fc_hdr_info["fsp_enabled"][fcid]:
                 self.fsp_decoder = FSPConfigDecoder()
-                self.key_list["fsp_config"].append(f"swtid_{key}")
+                self.key_list["fsp_config"].append(f"swtid_{fcid}/config")
         self.max_rows_in_packet = 1
 
     def get_key_lists(self) -> list[list[int, str]]:
         return list(self.key_list.values())
 
     def get_decoded_values(self, key: int | str = None) -> dict[str, Any]:
-        if isinstance(key, str) and key.startswith("fsp_config"):
+        if isinstance(key, str) and key.startswith("swtid_") and self.fsp_decoder is not None:
             return copy.deepcopy(self.fsp_decoder.get_decoded_values())
-        return self.decoded_values
+        elif isinstance(key, str) and key.startswith("fcid_"):
+            return copy.deepcopy(self.decoded_values)
         raise KeyError(f"no decoded values for key {key}")
 
     def decode_packet(
@@ -164,13 +164,15 @@ class ORFCIOConfigDecoder(OrcaDecoder):
 
         config_rbkd = rbl.get_keyed_dict()
 
+        fcid = fcio_stream.config.streamid & 0xFFFF
+
         # TODO: the decoders could fetch lgdo's using it's key_list
-        fc_key = fcio_stream.config.streamid & 0xFFFF
+        fc_key = f"fcid_{fcid}/config"
         any_full = self.decoder.decode_packet(
             fcio_stream, config_rbkd[fc_key], packet_id
         )
-        if self.fsp_decoder is not None:
-            fsp_key = f"fsp_config_{fcio_stream.config.streamid & 0xFFFF}"
+        if self.fsp_decoder is not None and self.fc_hdr_info["fsp_enabled"][fcid]:
+            fsp_key = f"swtid_{fcid}/config"
             any_full |= self.fsp_decoder.decode_packet(
                 fcio_stream, config_rbkd[fsp_key], packet_id
             )
@@ -199,16 +201,15 @@ class ORFCIOStatusDecoder(OrcaDecoder):
             # i.e. only one ADC Module the decoder will just not write to the buffer.
 
             # MDB key
-            self.key_list["fc_status"] = [get_status_key(fcid, 0)]
+            self.key_list["fc_status"] += [f"fcid_{fcid}/status/card{get_status_key(0)}"]
             # ADC module keys
             self.key_list["fc_status"] += [
-                get_status_key(fcid, 0x2000 + i)
+                f"fcid_{fcid}/status/card{get_status_key(0x2000 + i)}"
                 for i in range(self.fc_hdr_info["n_card"][fcid])
             ]
 
             if self.fc_hdr_info["fsp_enabled"][fcid]:
-                key = get_key(fcid, 0, 0)
-                self.key_list["fsp_status"].append(f"swtid_{key}")
+                self.key_list["fsp_status"].append(f"swtid_{fcid}/status")
                 self.fsp_decoder = FSPStatusDecoder()
         self.max_rows_in_packet = max(self.fc_hdr_info["n_card"].values()) + 1
 
@@ -224,12 +225,16 @@ class ORFCIOStatusDecoder(OrcaDecoder):
 
         if (
             isinstance(key, str)
-            and key.startswith("fsp_status")
+            and key.startswith("swtid_")
             and self.fsp_decoder is not None
         ):
             return copy.deepcopy(self.fsp_decoder.get_decoded_values())
-        elif isinstance(key, int):
-            return copy.deepcopy(self.decoder.get_decoded_values())
+        elif (
+            isinstance(key, str)
+            and key.startswith("fcid_")
+            and self.fsp_decoder is not None
+        ):
+            return copy.deepcopy(self.decoded_values)
         else:
             raise KeyError(f"no decoded values for key {key}")
 
@@ -276,12 +281,11 @@ class ORFCIOEventHeaderDecoder(OrcaDecoder):
 
         key_list = self.fc_hdr_info["key_list"]
         for fcid in key_list:
-            key = fcid
-            self.key_list["fc_eventheader"].append(key)
+            self.key_list["fc_eventheader"].append(f"fcid_{fcid}/evt_hdr")
             self.decoded_values[fcid] = copy.deepcopy(self.decoder.get_decoded_values())
             if self.fc_hdr_info["fsp_enabled"][fcid]:
                 self.fsp_decoder = FSPEventDecoder()
-                self.key_list["fsp_eventheader"].append(f"swtid_{key}")
+                self.key_list["fsp_eventheader"].append(f"swtid_{fcid}/evt_hdr")
 
         self.max_rows_in_packet = 1
 
@@ -291,20 +295,15 @@ class ORFCIOEventHeaderDecoder(OrcaDecoder):
     def get_decoded_values(self, key: int | str = None) -> dict[str, Any]:
         if (
             isinstance(key, str)
-            and key.startswith("fsp_eventheader_")
+            and key.startswith("swtid_")
             and self.fsp_decoder is not None
         ):
             return copy.deepcopy(self.fsp_decoder.get_decoded_values())
-        elif isinstance(key, int):
-            fcid = get_fcid(key)
-            if fcid in self.decoded_values:
-                return self.decoded_values[fcid]
-        elif key is None and self.fsp_decoder is None:
-            dec_vals_list = list(self.decoded_values.values())
-            if len(dec_vals_list) > 0:
-                return dec_vals_list[0]
-            raise RuntimeError("decoded_values not built")
-
+        elif (
+            isinstance(key, str)
+            and key.startswith("fcid_")
+        ):
+            return copy.deepcopy(self.decoder.get_decoded_values())
         raise KeyError(f"no decoded values for key {key}")
 
     def decode_packet(
@@ -354,7 +353,7 @@ class ORFCIOEventDecoder(OrcaDecoder):
             ][fcid]
             if self.fc_hdr_info["fsp_enabled"][fcid]:
                 key = fcid
-                self.key_list["fsp_event"].append(f"swtid_{key}")
+                self.key_list["fsp_event"].append(f"swtid_{key}/event")
                 self.fsp_decoder = FSPEventDecoder()
         self.max_rows_in_packet = max(self.fc_hdr_info["n_adc"].values())
 
@@ -373,7 +372,7 @@ class ORFCIOEventDecoder(OrcaDecoder):
 
         if (
             isinstance(key, str)
-            and key.startswith("fsp_event_")
+            and key.startswith("swtid_")
             and self.fsp_decoder is not None
         ):
             return copy.deepcopy(self.fsp_decoder.get_decoded_values())
