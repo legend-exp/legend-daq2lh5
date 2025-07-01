@@ -250,15 +250,19 @@ class ORFCIOStatusDecoder(OrcaDecoder):
         fcio_stream.set_mem_field(memoryview(packet[3:]))
 
         any_full = False
-        while fcio_stream.get_record():
-            if fcio_stream.tag == Tags.Status:
-                any_full |= self.decoder.decode_packet(
-                    fcio_stream, status_rbkd, packet_id
-                )
-                if self.fsp_decoder is not None:
-                    any_full |= self.fsp_decoder.decode_packet(
-                        fcio_stream, status_rbkd, packet_id
-                    )
+
+        if not fcio_stream.get_record():
+            raise IOError(f"Missing record in FCIO stream {fcio_stream.config.streamid & 0xFFFF}.")
+
+        if fcio_stream.tag == Tags.FSPStatus:
+            if self.fsp_decoder is not None:
+                any_full |= self.fsp_decoder.decode_packet(fcio_stream, status_rbkd, packet_id)
+
+            if not fcio_stream.get_record():
+                raise IOError(f"Missing record in FCIO stream {fcio_stream.config.streamid & 0xFFFF}.")
+
+        if fcio_stream.tag == Tags.Status:
+            any_full |= self.decoder.decode_packet(fcio_stream, status_rbkd, packet_id)
 
         return bool(any_full)
 
@@ -314,15 +318,19 @@ class ORFCIOEventHeaderDecoder(OrcaDecoder):
         fcio_stream.set_mem_field(memoryview(packet[3:]))
 
         any_full = False
-        while fcio_stream.get_record():
-            if fcio_stream.tag == Tags.EventHeader:
-                any_full |= self.decoder.decode_packet(
-                    fcio_stream, evthdr_rbkd, packet_id
-                )
-                if self.fsp_decoder is not None:
-                    any_full |= self.fsp_decoder.decode_packet(
-                        fcio_stream, evthdr_rbkd, packet_id, True
-                    )
+
+        if not fcio_stream.get_record():
+            raise IOError(f"Missing record in FCIO stream {fcio_stream.config.streamid & 0xFFFF}.")
+
+        if fcio_stream.tag == Tags.FSPEvent:
+            if self.fsp_decoder is not None:
+                any_full |= self.fsp_decoder.decode_packet(fcio_stream, evthdr_rbkd, packet_id, is_header=True)
+
+            if not fcio_stream.get_record():
+                raise IOError(f"Missing record in FCIO stream {fcio_stream.config.streamid & 0xFFFF}.")
+
+        if fcio_stream.tag == Tags.EventHeader:
+            any_full |= self.decoder.decode_packet(fcio_stream, evthdr_rbkd, packet_id)
 
         return bool(any_full)
 
@@ -393,12 +401,18 @@ class ORFCIOEventDecoder(OrcaDecoder):
         fcio_stream.set_mem_field(memoryview(packet[3:]))
 
         any_full = False
-        while fcio_stream.get_record():
-            if fcio_stream.tag == Tags.Event or fcio_stream.tag == Tags.SparseEvent:
-                any_full |= self.decoder.decode_packet(fcio_stream, evt_rbkd, packet_id)
-                if self.fsp_decoder is not None:
-                    any_full |= self.fsp_decoder.decode_packet(
-                        fcio_stream, evt_rbkd, packet_id, False
-                    )
+
+        if not fcio_stream.get_record():
+            raise IOError(f"Missing record in FCIO stream {fcio_stream.config.streamid & 0xFFFF}.")
+
+        if fcio_stream.tag == Tags.FSPEvent:
+            if self.fsp_decoder is not None:
+                any_full |= self.fsp_decoder.decode_packet(fcio_stream, evt_rbkd, packet_id)
+
+            if not fcio_stream.get_record():
+                raise IOError(f"Missing record in FCIO stream {fcio_stream.config.streamid & 0xFFFF}.")
+
+        if fcio_stream.tag == Tags.Event or fcio_stream.tag == Tags.SparseEvent:
+            any_full |= self.decoder.decode_packet(fcio_stream, evt_rbkd, packet_id)
 
         return bool(any_full)
