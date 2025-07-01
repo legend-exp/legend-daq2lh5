@@ -228,6 +228,9 @@ class FSPConfigDecoder(DataDecoder):
     def get_decoded_values(self, key: int = None) -> dict[str, dict[str, Any]]:
         return self.decoded_values
 
+    def get_key_lists(self) -> list[list[int | str]]:
+        return [copy.deepcopy(self.key_list)]
+
     def decode_packet(
         self,
         fcio: FCIO,
@@ -658,6 +661,9 @@ class FSPConfigDecoder(DataDecoder):
             "dsp_ct_thresholds",
             lgdo.Array(np.array(ct["thresholds"], dtype="uint16")[:ct_n_traces]),
         )
+
+        self.key_list.append(f"swtid_{fcio.config.streamid & 0xFFFF}/config")
+
         return self.fsp_config
 
     def make_lgdo(self, key: int | str = None, size: int = None) -> lgdo.Struct:
@@ -876,7 +882,7 @@ class FSPEventDecoder(DataDecoder):
         if lens > 0:
             tbl["obs_ps_hwm_prescaled_trace_idx"].flattened_data.nda[
                 start:end
-            ] = fcio.fsp.event.obs_ps_hwm_prescaled_trace_ix
+            ] = fcio.fsp.event.obs_ps_hwm_prescaled_trace_idx
         tbl["obs_ps_hwm_prescaled_trace_idx"].cumulative_length[loc] = end
 
         fsp_evt_rb.loc += 1
