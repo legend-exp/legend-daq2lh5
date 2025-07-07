@@ -186,7 +186,7 @@ class ORFCIOStatusDecoder(OrcaDecoder):
         self.decoder = FCStatusDecoder()
         self.fsp_decoder = None
         self.decoded_values = {}
-        self.key_list = {"fc_status": [], "fsp_status": []}
+        self.key_list = []
         self.max_rows_in_packet = 0
         super().__init__(header=header, **kwargs)
 
@@ -201,20 +201,20 @@ class ORFCIOStatusDecoder(OrcaDecoder):
             # i.e. only one ADC Module the decoder will just not write to the buffer.
 
             # MDB key
-            self.key_list["fc_status"] += [f"fcid_{fcid}/status/card{get_status_key(0)}"]
+            key_list_fcid = [f"fcid_{fcid}/status/card{get_status_key(0)}"]
             # ADC module keys
-            self.key_list["fc_status"] += [
+            key_list_fcid += [
                 f"fcid_{fcid}/status/card{get_status_key(0x2000 + i)}"
                 for i in range(self.fc_hdr_info["n_card"][fcid])
             ]
-
+            self.key_list.append(key_list_fcid)
             if self.fc_hdr_info["fsp_enabled"][fcid]:
-                self.key_list["fsp_status"].append(f"swtid_{fcid}/status")
+                self.key_list.append([f"swtid_{fcid}/status"])
                 self.fsp_decoder = FSPStatusDecoder()
         self.max_rows_in_packet = max(self.fc_hdr_info["n_card"].values()) + 1
 
     def get_key_lists(self) -> list[list[int | str]]:
-        return list(self.key_list.values())
+        return copy.deepcopy(self.key_list)
 
     def get_decoded_values(self, key: int | str = None) -> dict[str, Any]:
         if key is None:
@@ -342,7 +342,7 @@ class ORFCIOEventDecoder(OrcaDecoder):
         self.decoder = FCEventDecoder()
         self.fsp_decoder = None
 
-        self.key_list = {"event": [], "fsp_event": []}
+        self.key_list = []
         self.decoded_values = {}
         self.max_rows_in_packet = 0
 
@@ -354,19 +354,19 @@ class ORFCIOEventDecoder(OrcaDecoder):
         self.fc_hdr_info = extract_header_information(header)
         key_list = self.fc_hdr_info["key_list"]
         for fcid in key_list:
-            self.key_list["event"] += key_list[fcid]
+            self.key_list.append(key_list[fcid])
             self.decoded_values[fcid] = copy.deepcopy(self.decoder.get_decoded_values())
             self.decoded_values[fcid]["waveform"]["wf_len"] = self.fc_hdr_info[
                 "wf_len"
             ][fcid]
             if self.fc_hdr_info["fsp_enabled"][fcid]:
                 key = fcid
-                self.key_list["fsp_event"].append(f"swtid_{key}/event")
+                self.key_list.append([f"swtid_{key}/event"])
                 self.fsp_decoder = FSPEventDecoder()
         self.max_rows_in_packet = max(self.fc_hdr_info["n_adc"].values())
 
     def get_key_lists(self) -> list[list[int]]:
-        return list(self.key_list.values())
+        return copy.deepcopy(self.key_list)
 
     def get_max_rows_in_packet(self) -> int:
         return self.max_rows_in_packet
