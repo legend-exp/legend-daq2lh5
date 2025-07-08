@@ -29,7 +29,11 @@ def test_default_rb_lib(lgnd_test_data):
     assert "FSPStatusDecoder" in rb_lib.keys()
     assert rb_lib["FCConfigDecoder"][0].out_name == "FCConfig"
     assert rb_lib["FCStatusDecoder"][0].out_name == "FCStatus"
-    assert rb_lib["FCStatusDecoder"][0].key_list == [0, 8192]
+    # the test dataset was taken with default streamid 0
+    assert rb_lib["FCStatusDecoder"][0].key_list == [
+        "fcid_0/status/card0",
+        "fcid_0/status/card8192",
+    ]
     assert rb_lib["FCEventDecoder"][0].out_name == "FCEvent"
     assert rb_lib["FCEventDecoder"][0].key_list == [52800 + _ for _ in range(0, 6)]
     assert rb_lib["FCEventHeaderDecoder"][0].out_name == "FCEventHeader"

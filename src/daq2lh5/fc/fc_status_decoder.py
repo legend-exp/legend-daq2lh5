@@ -121,8 +121,8 @@ fc_status_decoded_values = {
 }
 
 
-def get_key(reqid):
-    return (reqid & 0xFFFF)
+def get_key(streamid, reqid):
+    return f"fcid_{streamid & 0xFFFF}/status/card{(reqid & 0xFFFF)}"
 
 
 def get_fcid(key: int) -> int:
@@ -167,21 +167,20 @@ class FCStatusDecoder(DataDecoder):
         # the number of master cards is the sum of top and sub masters,
         # if there is more than one, the first is the top master
         # the rest is a sub master card.
-        fcid = fcio_stream.config.streamid & 0xFFFF
         for i in range(fcio_stream.config.mastercards):
             if i == 0:
-                key = get_key(0)
+                key = get_key(fcio_stream.config.streamid, 0)
             else:
-                key = get_key(0x4000 + i - 1)
-            self.key_list.append(f"fcid_{fcid}/status/card{key}")
+                key = get_key(fcio_stream.config.streamid, 0x4000 + i - 1)
+            self.key_list.append(key)
 
         for i in range(fcio_stream.config.triggercards):
-            key = get_key(0x1000 + i)
-            self.key_list.append(f"fcid_{fcid}/status/card{key}")
+            key = get_key(fcio_stream.config.streamid, 0x1000 + i)
+            self.key_list.append(key)
 
         for i in range(fcio_stream.config.adccards):
-            key = get_key(0x2000 + i)
-            self.key_list.append(f"fcid_{fcid}/status/card{key}")
+            key = get_key(fcio_stream.config.streamid, 0x2000 + i)
+            self.key_list.append(key)
 
     def get_key_lists(self) -> list[list[int | str]]:
         return [copy.deepcopy(self.key_list)]
@@ -221,9 +220,7 @@ class FCStatusDecoder(DataDecoder):
         """
         any_full = False
         for card_data in fcio.status.data:
-            fcid = fcio.config.streamid & 0xFFFF
-            cardid = get_key(card_data.reqid)
-            key = f"fcid_{fcid}/status/card{cardid}"
+            key = get_key(fcio.config.streamid, card_data.reqid)
             if key not in status_rbkd:
                 continue
 
