@@ -126,7 +126,6 @@ class ORFCIOConfigDecoder(OrcaDecoder):
     def set_header(self, header: OrcaHeader) -> None:
         self.header = header
         self.fc_hdr_info = extract_header_information(header)
-        self.decoded_values = copy.deepcopy(self.decoder.get_decoded_values())
 
         for fcid in self.fc_hdr_info["fsp_enabled"]:
             self.key_list["fc_config"].append(f"fcid_{fcid}/config")
@@ -145,8 +144,8 @@ class ORFCIOConfigDecoder(OrcaDecoder):
             and self.fsp_decoder is not None
         ):
             return copy.deepcopy(self.fsp_decoder.get_decoded_values())
-        elif isinstance(key, str) and key.startswith("fcid_"):
-            return copy.deepcopy(self.decoded_values)
+        elif (isinstance(key, str) and key.startswith("fcid_")) or key is None:
+            return copy.deepcopy(self.decoder.get_decoded_values())
         raise KeyError(f"no decoded values for key {key}")
 
     def decode_packet(
@@ -163,7 +162,8 @@ class ORFCIOConfigDecoder(OrcaDecoder):
 
         if fcio_stream.config.streamid != packet[2]:
             log.warning(
-                f"The expected stream id {packet[2]} does not match the contained stream id {fcio_stream.config.streamid}"
+                f"The expected stream id {packet[2]} does not match the contained stream id "
+                f"{fcio_stream.config.streamid}"
             )
 
         config_rbkd = rbl.get_keyed_dict()
@@ -198,7 +198,6 @@ class ORFCIOStatusDecoder(OrcaDecoder):
         """Setter for headers. Overload to set card parameters, etc."""
         self.header = header
         self.fc_hdr_info = extract_header_information(header)
-        self.decoded_values = copy.deepcopy(self.decoder.get_decoded_values())
 
         for fcid in self.fc_hdr_info["n_card"]:
             # If the data was taken without a master distribution module,
@@ -221,11 +220,6 @@ class ORFCIOStatusDecoder(OrcaDecoder):
         return copy.deepcopy(self.key_list)
 
     def get_decoded_values(self, key: int | str = None) -> dict[str, Any]:
-        if key is None:
-            dec_vals_list = list(self.decoded_values)
-            if len(dec_vals_list) > 0:
-                return {dec_vals_list[0]: self.decoded_values[dec_vals_list[0]]}
-            raise RuntimeError("decoded_values not built")
 
         if (
             isinstance(key, str)
@@ -233,12 +227,8 @@ class ORFCIOStatusDecoder(OrcaDecoder):
             and self.fsp_decoder is not None
         ):
             return copy.deepcopy(self.fsp_decoder.get_decoded_values())
-        elif (
-            isinstance(key, str)
-            and key.startswith("fcid_")
-            and self.fsp_decoder is not None
-        ):
-            return copy.deepcopy(self.decoded_values)
+        elif (isinstance(key, str) and key.startswith("fcid_")) or key is None:
+            return copy.deepcopy(self.decoder.get_decoded_values())
         else:
             raise KeyError(f"no decoded values for key {key}")
 
@@ -313,7 +303,7 @@ class ORFCIOEventHeaderDecoder(OrcaDecoder):
             and self.fsp_decoder is not None
         ):
             return copy.deepcopy(self.fsp_decoder.get_decoded_values())
-        elif isinstance(key, str) and key.startswith("fcid_"):
+        elif (isinstance(key, str) and key.startswith("fcid_")) or key is None:
             return copy.deepcopy(self.decoder.get_decoded_values())
         raise KeyError(f"no decoded values for key {key}")
 
