@@ -122,7 +122,7 @@ fc_status_decoded_values = {
 
 
 def get_key(streamid, reqid):
-    return (streamid & 0xFFFF) * 1000000 + (reqid & 0xFFFF)
+    return f"fcid_{streamid & 0xFFFF}/status/card{(reqid & 0xFFFF)}"
 
 
 def get_fcid(key: int) -> int:

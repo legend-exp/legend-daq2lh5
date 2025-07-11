@@ -66,6 +66,7 @@ class FCConfigDecoder(DataDecoder):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.decoded_values = copy.deepcopy(fc_config_decoded_values)
+        self.key_list = []
 
     def decode_packet(
         self,
@@ -126,7 +127,12 @@ class FCConfigDecoder(DataDecoder):
         ntraces = fcio.config.adcs + fcio.config.triggers
         tbl.add_field("tracemap", lgdo.Array(fcio.config.tracemap[:ntraces]))
 
+        self.key_list.append(f"fcid_{fcio.config.streamid & 0xFFFF}/config")
+
         return tbl
+
+    def get_key_lists(self) -> list[list[int | str]]:
+        return [copy.deepcopy(self.key_list)]
 
     def get_decoded_values(self, key: int | str = None) -> dict[str, dict[str, Any]]:
         return self.decoded_values

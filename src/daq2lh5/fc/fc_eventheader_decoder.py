@@ -212,7 +212,7 @@ class FCEventHeaderDecoder(DataDecoder):
         self.decoded_values["baseline"]["length_guess"] = n_traces
         self.decoded_values["daqenergy"]["length_guess"] = n_traces
 
-        self.key_list = [get_key(fcio_stream.config.streamid, 0, 0)]
+        self.key_list = [f"fcid_{fcio_stream.config.streamid & 0xFFFF}/evt_hdr"]
 
     def get_key_lists(self) -> list[list[int | str]]:
         return [copy.deepcopy(self.key_list)]
@@ -232,7 +232,7 @@ class FCEventHeaderDecoder(DataDecoder):
     ) -> bool:
 
         # only one key available: this streamid
-        key = get_key(fcio.config.streamid, 0, 0)
+        key = f"fcid_{fcio.config.streamid & 0xFFFF}/evt_hdr"
         if key not in evt_hdr_rbkd:
             return False
 

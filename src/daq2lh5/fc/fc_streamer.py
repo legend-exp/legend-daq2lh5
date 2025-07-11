@@ -148,7 +148,8 @@ class FCStreamer(DataStreamer):
                 if len(config_rb_list) != 1:
                     log.warning(
                         f"config_rb_list for {config_decoder} had length {len(config_rb_list)}, "
-                        "ignoring all but the first"
+                        "ignoring all but the first. "
+                        f"{config_rb_list}"
                     )
                 rb = config_rb_list[0]
             else:
