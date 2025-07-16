@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 
@@ -78,6 +79,13 @@ def daq2lh5_cli():
     parser.add_argument(
         "--overwrite", "-w", action="store_true", help="""Overwrite output files"""
     )
+    parser.add_argument(
+        "--kwargs",
+        "-k",
+        type=str,
+        default="{}",
+        help="""Any additional kwargs to pass to build_raw, will be parsed as a JSON string""",
+    )
 
     args = parser.parse_args()
 
@@ -92,6 +100,9 @@ def daq2lh5_cli():
         print(__version__)  # noqa: T201
         sys.exit()
 
+    if args.kwargs:
+        kwargs = json.loads(args.kwargs)
+
     for stream in args.in_stream:
         basename = os.path.splitext(os.path.basename(stream))[0]
         build_raw(
@@ -102,4 +113,5 @@ def daq2lh5_cli():
             n_max=args.max_rows,
             overwrite=args.overwrite,
             orig_basename=basename,
+            **kwargs,
         )
