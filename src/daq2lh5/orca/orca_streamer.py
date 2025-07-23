@@ -383,8 +383,6 @@ class OrcaStreamer(DataStreamer):
             chunk_mode=chunk_mode,
             out_stream=out_stream,
         )
-        if rb_lib is None:
-            rb_lib = self.rb_lib
         good_buffers = []
         for data_id in self.decoder_id_dict.keys():
             name = id_to_dec_name_dict[data_id]
@@ -400,8 +398,8 @@ class OrcaStreamer(DataStreamer):
         log.debug(f"rb_lib = {self.rb_lib}")
 
         # return header raw buffer
-        if "OrcaHeaderDecoder" in rb_lib:
-            header_rb_list = rb_lib["OrcaHeaderDecoder"]
+        if "OrcaHeaderDecoder" in self.rb_lib:
+            header_rb_list = self.rb_lib["OrcaHeaderDecoder"]
             if len(header_rb_list) != 1:
                 log.warning(
                     f"header_rb_list had length {len(header_rb_list)}, ignoring all but the first"
