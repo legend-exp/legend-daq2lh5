@@ -25,8 +25,10 @@ compass_decoded_values = {
     "channel": {"dtype": "uint32"},
     # Timestamp of event
     "timestamp": {"dtype": "float64", "units": "ps"},
-    # Energy of event
+    # Energy of event in channels
     "energy": {"dtype": "uint32"},
+    # Energy of event, calibrated
+    "energy_calibrated": {"dtype": "float64"},
     # Energy short of event
     "energy_short": {"dtype": "uint32"},
     # Flags that the digitizer raised
@@ -153,50 +155,56 @@ class CompassEventDecoder(DataDecoder):
         # the time stamp also does not care about if we have an energy short present
         tbl["timestamp"].nda[ii] = np.frombuffer(packet[4:12], dtype=np.uint64)[0]
 
-        # get the rest of the values depending on if there is an energy_short present
-        if int(header["energy_short"].value) == 1:  # again, the header is a struct
+        # stumble our way through the energy, depending on what the header says
+        bytes_read = 12
+        if int(header["energy_channels"].value) == 1:
             tbl["energy"].nda[ii] = np.frombuffer(packet[12:14], dtype=np.uint16)[0]
-            tbl["energy_short"].nda[ii] = np.frombuffer(packet[14:16], dtype=np.uint16)[
-                0
-            ]
-            tbl["flags"].nda[ii] = np.frombuffer(packet[16:20], np.uint32)[0]
-            tbl["num_samples"].nda[ii] = np.frombuffer(packet[21:25], dtype=np.uint32)[
-                0
-            ]
-
-            if (
-                tbl["num_samples"].nda[ii]
-                != self.decoded_values[bc]["waveform"]["wf_len"]
-            ):  # make sure that the waveform we read in is the same length as in the config
-                raise RuntimeError(
-                    f"Waveform size {tbl['num_samples'].nda[ii]} doesn't match expected size {self.decoded_values[bc]['waveform']['wf_len']}. "
-                    "Skipping packet"
-                )
-
-            tbl["waveform"]["values"].nda[ii] = np.frombuffer(
-                packet[25:], dtype=np.uint16
-            )
-
+            bytes_read += 2
+            if int(header["energy_calibrated"].value) == 1:
+                tbl["energy_calibrated"].nda[ii] = None
+        elif (int(header["energy_calibrated"].value) == 1) and (
+            int(header["energy_channels"].value) == 0
+        ):
+            tbl["energy_calibrated"].nda[ii] = np.frombuffer(
+                packet[14:22], dtype=np.float64
+            )[0]
+            bytes_read += 8
+            tbl["energy"].nda[ii] = None
         else:
-            tbl["energy"].nda[ii] = np.frombuffer(packet[12:14], dtype=np.uint16)[0]
+            tbl["energy_calibrated"].nda[ii] = np.frombuffer(
+                packet[12:20], dtype=np.float64
+            )[0]
+            bytes_read += 8
+
+        # now handle the energy short
+        if int(header["energy_short"].value) == 1:
+            tbl["energy_short"].nda[ii] = np.frombuffer(
+                packet[bytes_read : bytes_read + 2], dtype=np.uint16
+            )[0]
+            bytes_read += 2
+        else:
             tbl["energy_short"].nda[ii] = None
-            tbl["flags"].nda[ii] = np.frombuffer(packet[14:18], np.uint32)[0]
-            tbl["num_samples"].nda[ii] = np.frombuffer(packet[19:23], dtype=np.uint32)[
-                0
-            ]
 
-            if (
-                tbl["num_samples"].nda[ii]
-                != self.decoded_values[bc]["waveform"]["wf_len"]
-            ):  # make sure that the waveform we read in is the same length as in the config
-                raise RuntimeError(
-                    f"Waveform size {tbl['num_samples'].nda[ii]} doesn't match expected size {self.decoded_values[bc]['waveform']['wf_len']}. "
-                    "Skipping packet"
-                )
+        tbl["flags"].nda[ii] = np.frombuffer(
+            packet[bytes_read : bytes_read + 4], np.uint32
+        )[0]
+        bytes_read += 5  # skip over the waveform code
+        tbl["num_samples"].nda[ii] = np.frombuffer(
+            packet[bytes_read : bytes_read + 4], dtype=np.uint32
+        )[0]
+        bytes_read += 4
 
-            tbl["waveform"]["values"].nda[ii] = np.frombuffer(
-                packet[23:], dtype=np.uint16
+        if (
+            tbl["num_samples"].nda[ii] != self.decoded_values[bc]["waveform"]["wf_len"]
+        ):  # make sure that the waveform we read in is the same length as in the config
+            raise RuntimeError(
+                f"Waveform size {tbl['num_samples'].nda[ii]} doesn't match expected size {self.decoded_values[bc]['waveform']['wf_len']}. "
+                "Skipping packet"
             )
+
+        tbl["waveform"]["values"].nda[ii] = np.frombuffer(
+            packet[bytes_read:], dtype=np.uint16
+        )
 
         evt_rbkd[bc].loc += 1
         return evt_rbkd[bc].is_full()

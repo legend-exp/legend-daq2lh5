@@ -72,22 +72,6 @@ class CompassStreamer(DataStreamer):
         So, we must read this header once, and then proceed to read packets in.
         """
         # If a config file is not present, the wf_len can be determined by opening the first few bytes of the in_stream
-        wf_len = None
-        if self.compass_config_file is None:
-            self.set_in_stream(stream_name)
-
-            first_bytes = self.in_stream.read(27)
-
-            energy_short = str(
-                bin(int.from_bytes(first_bytes[:2], byteorder="little"))
-            )[::-1][2]
-
-            if int(energy_short) == 1:
-                [wf_len] = np.frombuffer(first_bytes[23:27], dtype=np.uint32)
-            else:
-                [wf_len] = np.frombuffer(first_bytes[21:25], dtype=np.uint32)
-
-            self.close_stream()
 
         # set the in_stream
         self.set_in_stream(stream_name)
@@ -95,11 +79,20 @@ class CompassStreamer(DataStreamer):
 
         # read in and decode the file header info, passing the compass_config_file, if present
         self.header = self.header_decoder.decode_header(
-            self.in_stream, self.compass_config_file, wf_len
+            self.in_stream, self.compass_config_file
         )  # returns an lgdo.Struct
-        self.n_bytes_read += (
-            2  # there are 2 bytes in the header, for a 16 bit number to read out
-        )
+        self.close_stream()
+
+        # Now we are ready to read the data
+        self.set_in_stream(stream_name)
+        self.n_bytes_read = 0
+
+        if int(self.header["header_present"].value) == 1:
+            # read 2 bytes if we need to
+            self.in_stream.read(2)
+            self.n_bytes_read += (
+                2  # there are 2 bytes in the header, for a 16 bit number to read out
+            )
 
         # set up data loop variables
         self.packet_id = 0
@@ -171,16 +164,34 @@ class CompassStreamer(DataStreamer):
         if self.in_stream is None:
             raise RuntimeError("self.in_stream is None")
 
-        if (self.packet_id == 0) and (self.n_bytes_read != 2):
+        if (
+            (self.packet_id == 0)
+            and (self.n_bytes_read != 2)
+            and (int(self.header["header_present"].value) == 1)
+        ):
             raise RuntimeError(
                 f"The 2 byte filer header was not converted, instead read in {self.n_bytes_read} for the file header"
             )
+        if (
+            (self.packet_id == 0)
+            and (self.n_bytes_read != 0)
+            and (int(self.header["header_present"].value) == 0)
+        ):
+            raise RuntimeError(
+                f"The header was not converted, instead read in {self.n_bytes_read} for the file header"
+            )
 
-        # packets have metadata of variable lengths, depending on if the header shows that energy_short is present in the metadata
+        # packets have metadata of variable lengths, depending on what the header shows
+        header_length = 12  # header always starts with 2-bytes of board, 2-bytes of channel, and 8-bytes of timestamp
+        if int(self.header["energy_channels"].value) == 1:
+            header_length += 2  # if the energy is recorded in ADC channels, then there are an extra 2 bytes in the metadata
+        if int(self.header["energy_calibrated"].value) == 1:
+            header_length += 8  # if the energy is recorded in keV/MeV, then there are an extra 8 bytes in the metadata
         if int(self.header["energy_short"].value) == 1:
-            header_length = 25  # if the energy short is present, then there are an extra 2 bytes in the metadata
-        else:
-            header_length = 23  # the normal packet metadata is 23 bytes long
+            header_length += 2  # if the energy short is present, then there are an extra 2 bytes in the metadata
+        header_length += (
+            4 + 1 + 4
+        )  # the flags, the waveform code bytes, and the waveform length
 
         # read the packet's metadata into the buffer
         pkt_hdr = self.buffer[:header_length]
@@ -190,16 +201,11 @@ class CompassStreamer(DataStreamer):
         # return None once we run out of file
         if n_bytes_read == 0:
             return None
-        if (n_bytes_read != 25) and (n_bytes_read != 23):
+        if n_bytes_read not in [23, 25, 29, 31, 33]:
             raise RuntimeError(f"only got {n_bytes_read} bytes for packet header")
 
-        # get the waveform length so we can read in the rest of the packet
-        if n_bytes_read == 25:
-            [num_samples] = np.frombuffer(pkt_hdr[21:25], dtype=np.uint32)
-            pkt_length = header_length + 2 * num_samples
-        if n_bytes_read == 23:
-            [num_samples] = np.frombuffer(pkt_hdr[19:23], dtype=np.uint32)
-            pkt_length = header_length + 2 * num_samples
+        [num_samples] = np.frombuffer(pkt_hdr[-4:], dtype=np.uint32)
+        pkt_length = header_length + 2 * num_samples
 
         # load into buffer, resizing as necessary
         if len(self.buffer) < pkt_length:
