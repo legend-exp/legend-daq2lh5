@@ -8,7 +8,7 @@ import logging
 import numpy as np
 
 from ..data_streamer import DataStreamer
-from ..raw_buffer import RawBuffer, RawBufferLibrary
+from ..raw_buffer import RawBuffer, RawBufferLibrary, RawBufferList
 from . import orca_packet
 from .orca_base import OrcaDecoder
 from .orca_digitizers import (  # noqa: F401
@@ -351,6 +351,15 @@ class OrcaStreamer(DataStreamer):
         if rb_lib is not None and "*" not in rb_lib:
             keep_decoders = []
             for name in decoder_names:
+                # Decoding of FCIOConfig is required to open the wrapped fcio stream (in orca_fcio.py).
+                # With `out_stream == ''` the buffer will be allocated and decoded, but not written.
+                if name == "ORFCIOConfigDecoder" and name not in rb_lib:
+                    rb_lib[name] = RawBufferList()
+                    rb_lib[name].append(
+                        RawBuffer(
+                            lgdo=None, key_list=["*"], out_name="{key}", out_stream=""
+                        )
+                    )
                 if name in rb_lib:
                     keep_decoders.append(name)
             decoder_names = keep_decoders
