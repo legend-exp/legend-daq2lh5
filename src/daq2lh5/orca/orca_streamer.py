@@ -366,8 +366,7 @@ class OrcaStreamer(DataStreamer):
             shift_data_id=False
         )
         instantiated_decoders = {"OrcaHeaderDecoder": self.header_decoder}
-        for data_id in id_to_dec_name_dict.keys():
-            name = id_to_dec_name_dict[data_id]
+        for data_id, name in id_to_dec_name_dict.items():
             if name not in instantiated_decoders:
                 if name not in globals():
                     self.missing_decoders.append(data_id)
