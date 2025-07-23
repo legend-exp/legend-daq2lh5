@@ -40,7 +40,6 @@ def compass_config_no_settings(lgnd_test_data):
     test_file = lgnd_test_data.get_path("compass/compass_test_data.BIN")
     in_stream = open(test_file, "rb")
     compass_config_file = None
-    wf_len = 1000
-    decoder.decode_header(in_stream, compass_config_file, wf_len)
+    decoder.decode_header(in_stream, compass_config_file)
     in_stream.close()
     return decoder.config

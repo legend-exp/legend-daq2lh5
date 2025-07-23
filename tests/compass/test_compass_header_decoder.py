@@ -46,6 +46,7 @@ def test_values(compass_config):
         "energy_channels": 1,
         "energy_short": 1,
         "waveform_samples": 1,
+        "header_present": 1,
     }
     # We have a nested struct, so we need some nasty recursion
     for key in compass_config.keys():
@@ -136,6 +137,7 @@ def test_values_no_config(compass_config_no_settings):
         "energy_channels": 1,
         "energy_short": 1,
         "waveform_samples": 1,
+        "header_present": 1,
     }
     # We have a nested struct, so we need some nasty recursion
     for key in compass_config_no_settings.keys():
