@@ -183,7 +183,7 @@ class CompassEventDecoder(DataDecoder):
             )[0]
             bytes_read += 2
         else:
-            tbl["energy_short"].nda[ii] = None
+            tbl["energy_short"].nda[ii] = 0
 
         tbl["flags"].nda[ii] = np.frombuffer(
             packet[bytes_read : bytes_read + 4], np.uint32
