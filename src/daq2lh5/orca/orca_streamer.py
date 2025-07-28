@@ -351,8 +351,11 @@ class OrcaStreamer(DataStreamer):
         if rb_lib is not None and "*" not in rb_lib:
             keep_decoders = []
             for name in decoder_names:
-                # Decoding of FCIOConfig is required to open the wrapped fcio stream (in orca_fcio.py).
-                # With `out_stream == ''` the buffer will be allocated and decoded, but not written.
+                # Decoding ORFCIO streams requires decoding ORFCIOConfig packets,
+                # as it opens the wrapped fcio stream (in orca_fcio.py) and decodes the fields
+                # required for the other FCIO packets.
+                # With `out_stream == ''` the lgdo buffer will be allocated, and the packet
+                # decoded, but not written to the out_stream the user defined.
                 if name == "ORFCIOConfigDecoder" and name not in rb_lib:
                     rb_lib[name] = RawBufferList()
                     rb_lib[name].append(
