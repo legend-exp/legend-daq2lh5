@@ -48,7 +48,7 @@ def test_orfcio_config_decoding_swt(orca_stream_fcio_swt, fcio_swt_packets):
     assert name == "ORFCIOConfigDecoder"
 
 
-def test_orfcio_waveform_decoding_swt(orca_stream_fcio_swt, fcio_swt_packets):
+def test_orfcio_eventheader_decoding_swt(orca_stream_fcio_swt, fcio_swt_packets):
     wf_packet = fcio_swt_packets[1]
     assert wf_packet is not None
 

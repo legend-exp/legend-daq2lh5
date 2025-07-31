@@ -14,9 +14,12 @@ log = logging.getLogger(__name__)
 
 def get_key(streamid: int, card_address: int, card_input: int, iwf: int = -1) -> int:
     if streamid > 0 or iwf < 0:
-        # For backwards compatibility only the lower 16-bit of the streamid are
-        # used.
-        return (streamid & 0xFFFF) * 1000000 + card_address * 100 + card_input
+        # For backwards compatibility only the lower 16-bit of the streamid are used.
+        return (
+            (int(streamid) & 0xFFFF) * 1000000
+            + int(card_address) * 100
+            + int(card_input)
+        )
     else:
         return iwf
 

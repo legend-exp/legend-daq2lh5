@@ -152,24 +152,41 @@ class FCEventDecoder(DataDecoder):
             tbl["board_id"].nda[loc] = fcio.event.card_address[ii]
             tbl["fc_input"].nda[loc] = fcio.event.card_channel[ii]
             tbl["event_type"].nda[loc] = fcio.event.type
-            tbl["eventnumber"].nda[loc] = fcio.event.timestamp[0]
             tbl["numtraces"].nda[loc] = fcio.event.num_traces
-            tbl["ts_pps"].nda[loc] = fcio.event.timestamp[1]
-            tbl["ts_ticks"].nda[loc] = fcio.event.timestamp[2]
-            tbl["ts_maxticks"].nda[loc] = fcio.event.timestamp[3]
-            tbl["mu_offset_sec"].nda[loc] = fcio.event.timeoffset[0]
-            tbl["mu_offset_usec"].nda[loc] = fcio.event.timeoffset[1]
-            tbl["to_master_sec"].nda[loc] = fcio.event.timeoffset[2]
-            tbl["delta_mu_usec"].nda[loc] = fcio.event.timeoffset[3]
-            tbl["abs_delta_mu_usec"].nda[loc] = fcio.event.timeoffset[4]
-            tbl["to_start_sec"].nda[loc] = fcio.event.timeoffset[5]
-            tbl["to_start_usec"].nda[loc] = fcio.event.timeoffset[6]
-            tbl["dr_start_pps"].nda[loc] = fcio.event.deadregion[0]
-            tbl["dr_start_ticks"].nda[loc] = fcio.event.deadregion[1]
-            tbl["dr_stop_pps"].nda[loc] = fcio.event.deadregion[2]
-            tbl["dr_stop_ticks"].nda[loc] = fcio.event.deadregion[3]
-            tbl["dr_maxticks"].nda[loc] = fcio.event.deadregion[4]
-            # if event_type == 11: provides the same check
+
+            # the order of names is crucial here!
+            timestamp_names = [
+                "eventnumber",
+                "ts_pps",
+                "ts_ticks",
+                "ts_maxticks",
+            ]
+            for name, value in zip(timestamp_names, fcio.event.timestamp):
+                tbl[name].nda[loc] = value
+
+            timeoffset_names = [
+                "mu_offset_sec",
+                "mu_offset_usec",
+                "to_master_sec",
+                "delta_mu_usec",
+                "abs_delta_mu_usec",
+                "to_start_sec",
+                "to_start_usec",
+            ]
+            for name, value in zip(timeoffset_names, fcio.event.timeoffset):
+                tbl[name].nda[loc] = value
+
+            deadregion_names = [
+                "dr_start_pps",
+                "dr_start_ticks",
+                "dr_stop_pps",
+                "dr_stop_ticks",
+                "dr_maxticks",
+            ]
+            for name, value in zip(deadregion_names, fcio.event.deadregion[:5]):
+                tbl[name].nda[loc] = value
+
+            # if event_type == 11: would provide the same check
             # however, the usage of deadregion[5]/[6] must never change
             # and it will always be present if deadregion[7..] is ever used
             if fcio.event.deadregion_size >= 7:
@@ -179,7 +196,7 @@ class FCEventDecoder(DataDecoder):
                 tbl["dr_ch_idx"].nda[loc] = 0
                 tbl["dr_ch_len"].nda[loc] = fcio.config.adcs
 
-            # The following values are calculated values by fcio-py
+            # The following values are calculated by fcio-py, derived from fields above.
             tbl["timestamp"].nda[loc] = fcio.event.unix_time_utc_sec
             tbl["deadinterval_nsec"].nda[loc] = fcio.event.dead_interval_nsec[ii]
             tbl["deadtime"].nda[loc] = fcio.event.dead_time_sec[ii]

@@ -9,6 +9,7 @@ import lgdo.lh5 as lh5
 import numpy as np
 
 from daq2lh5 import build_raw
+from daq2lh5.fc.fc_event_decoder import get_key
 from daq2lh5.orca import orca_streamer
 from daq2lh5.orca.orca_flashcam import ORFlashCamListenerConfigDecoder
 from daq2lh5.orca.orca_run_decoder import ORRunDecoderForRun
@@ -265,3 +266,71 @@ def test_daq_to_raw(lgnd_test_data, tmptestdir):
     # assert the byte strings are the same
     assert len(rebuilt_orca_data) == len(orig_orca_data)
     assert rebuilt_orca_data == orig_orca_data
+
+
+def test_daq_to_raw_orfcio_outspec(lgnd_test_data, tmptestdir):
+    """Test function for the daq to raw validation."""
+
+    # open orca daq file and create LH5 file
+    orca_file = lgnd_test_data.get_path(
+        "orca/fcio/l200-p14-r004-cal-20250606T010224Z.orca"
+    )
+
+    filekey = f"{tmptestdir}/l200-p14-r004-cal-20250606T010224Z.lh5"
+
+    expected_top_level_keys = [
+        "ch1105600",
+        "ch1105604",
+        "ch1107202",
+        "ch1113600",
+        "ch1115200",
+        "ch1115205",
+    ]
+
+    # Test minimal waveform out_spec. Test ORFCIOConfigDecoder hidden auto-decoding in build_raw
+
+    out_spec = {
+        "ORFCIOEventDecoder": {
+            "ch{key:07d}/raw": {
+                "key_list": ["*"],
+                "out_stream": f"{filekey}",
+            }
+        }
+    }
+
+    build_raw(
+        orca_file,
+        in_stream_type="ORCA",
+        out_spec=out_spec,
+        overwrite=True,
+    )
+
+    top_level_keys = lh5.ls(filekey, "/")
+    assert top_level_keys == expected_top_level_keys
+
+    # Test default out_spec: filekey is out_stream, no spec given.
+
+    build_raw(
+        orca_file,
+        in_stream_type="ORCA",
+        out_spec=filekey,
+        overwrite=True,
+    )
+
+    top_level_keys = lh5.ls(filekey, "/")
+
+    rawid_components = lh5.read(
+        "ORFCIOEvent_0", filekey, field_mask=["board_id", "fc_input", "fcid"]
+    )
+    auto_decoded_keys = sorted(
+        {
+            f"ch{get_key(fcid, board_id, fc_input)}"
+            for fcid, board_id, fc_input in zip(
+                rawid_components["fcid"],
+                rawid_components["board_id"],
+                rawid_components["fc_input"],
+            )
+        }
+    )
+
+    assert auto_decoded_keys == expected_top_level_keys

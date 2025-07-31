@@ -8,7 +8,7 @@ import logging
 import numpy as np
 
 from ..data_streamer import DataStreamer
-from ..raw_buffer import RawBuffer, RawBufferLibrary
+from ..raw_buffer import RawBuffer, RawBufferLibrary, RawBufferList
 from . import orca_packet
 from .orca_base import OrcaDecoder
 from .orca_digitizers import (  # noqa: F401
@@ -351,6 +351,18 @@ class OrcaStreamer(DataStreamer):
         if rb_lib is not None and "*" not in rb_lib:
             keep_decoders = []
             for name in decoder_names:
+                # Decoding ORFCIO streams requires decoding ORFCIOConfig packets,
+                # as it opens the wrapped fcio stream (in orca_fcio.py) and decodes the fields
+                # required for the other FCIO packets.
+                # With `out_stream == ''` the lgdo buffer will be allocated, and the packet
+                # decoded, but not written to the out_stream the user defined.
+                if name == "ORFCIOConfigDecoder" and name not in rb_lib:
+                    rb_lib[name] = RawBufferList()
+                    rb_lib[name].append(
+                        RawBuffer(
+                            lgdo=None, key_list=["*"], out_name="{key}", out_stream=""
+                        )
+                    )
                 if name in rb_lib:
                     keep_decoders.append(name)
             decoder_names = keep_decoders
@@ -366,8 +378,7 @@ class OrcaStreamer(DataStreamer):
             shift_data_id=False
         )
         instantiated_decoders = {"OrcaHeaderDecoder": self.header_decoder}
-        for data_id in id_to_dec_name_dict.keys():
-            name = id_to_dec_name_dict[data_id]
+        for data_id, name in id_to_dec_name_dict.items():
             if name not in instantiated_decoders:
                 if name not in globals():
                     self.missing_decoders.append(data_id)
@@ -384,8 +395,6 @@ class OrcaStreamer(DataStreamer):
             chunk_mode=chunk_mode,
             out_stream=out_stream,
         )
-        if rb_lib is None:
-            rb_lib = self.rb_lib
         good_buffers = []
         for data_id in self.decoder_id_dict.keys():
             name = id_to_dec_name_dict[data_id]
@@ -401,8 +410,8 @@ class OrcaStreamer(DataStreamer):
         log.debug(f"rb_lib = {self.rb_lib}")
 
         # return header raw buffer
-        if "OrcaHeaderDecoder" in rb_lib:
-            header_rb_list = rb_lib["OrcaHeaderDecoder"]
+        if "OrcaHeaderDecoder" in self.rb_lib:
+            header_rb_list = self.rb_lib["OrcaHeaderDecoder"]
             if len(header_rb_list) != 1:
                 log.warning(
                     f"header_rb_list had length {len(header_rb_list)}, ignoring all but the first"
