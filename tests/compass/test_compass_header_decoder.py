@@ -1,5 +1,5 @@
 import numpy as np
-from lgdo import Scalar, LGDO
+from lgdo import LGDO, Scalar
 
 
 def test_decoding(compass_config):
