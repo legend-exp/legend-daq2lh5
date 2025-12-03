@@ -1,5 +1,5 @@
 import numpy as np
-from lgdo import Scalar
+from lgdo import Scalar, LGDO
 
 
 def test_decoding(compass_config):
@@ -11,11 +11,11 @@ def test_decoding_no_settings(compass_config_no_settings):
 
 
 def test_data_types(compass_config):
-    assert isinstance(compass_config, dict)
+    assert isinstance(compass_config, LGDO)
 
 
 def test_data_types_no_settings(compass_config_no_settings):
-    assert isinstance(compass_config_no_settings, dict)
+    assert isinstance(compass_config_no_settings, LGDO)
 
 
 def test_values(compass_config):
