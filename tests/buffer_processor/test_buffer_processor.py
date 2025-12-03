@@ -696,7 +696,7 @@ def test_proc_geds_no_proc_spms(lgnd_test_data, tmptestdir):
         # check that the t_lo_sat and t_sat_hi are correct
         if not pass_flag:
             wf_table = lh5.read(str(raw_group), raw_file)
-            pc, _, wf_out = bpc(wf_table, json.loads(raw_dsp_config))
+            pc, _, wf_out = bpc(tb_in=wf_table, processors=json.loads(raw_dsp_config))
             pc.execute()
             raw_sat_lo = wf_out["t_sat_lo"]
             raw_sat_hi = wf_out["t_sat_hi"]
@@ -965,7 +965,7 @@ def test_buffer_processor_multiple_keys(lgnd_test_data, tmptestdir):
         # check that the t_lo_sat and t_sat_hi are correct
         if not pass_flag:
             wf_table = lh5.read(str(raw_group), raw_file)
-            pc, _, wf_out = bpc(wf_table, json.loads(raw_dsp_config))
+            pc, _, wf_out = bpc(tb_in=wf_table, processors=json.loads(raw_dsp_config))
             pc.execute()
             raw_sat_lo = wf_out["t_sat_lo"]
             raw_sat_hi = wf_out["t_sat_hi"]
@@ -1273,7 +1273,7 @@ def test_buffer_processor_drop_waveform_small_buffer(lgnd_test_data, tmptestdir)
         # check that the t_lo_sat and t_sat_hi are correct
         if not pass_flag:
             wf_table = lh5.read(str(raw_group), raw_file)
-            pc, _, wf_out = bpc(wf_table, json.loads(raw_dsp_config))
+            pc, _, wf_out = bpc(tb_in=wf_table, processors=json.loads(raw_dsp_config))
             pc.execute()
             raw_sat_lo = wf_out["t_sat_lo"]
             raw_sat_hi = wf_out["t_sat_hi"]
