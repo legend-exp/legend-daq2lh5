@@ -324,7 +324,9 @@ def process_dsp(rb: RawBuffer, tmp_table: Table, db_dict: dict = None) -> None:
     try:
         # execute the processing chain
         # This checks that the rb.lgdo is a table and that the field_name is present in the table
-        proc_chain, mask, dsp_out = bpc(rb.lgdo, dsp_dict, db_dict=db_dict)
+        proc_chain, mask, dsp_out = bpc(
+            tb_in=rb.lgdo, processors=dsp_dict, db_dict=db_dict
+        )
     # Allow for exceptions, in the case of "*" key expansion in the build_raw out_spec
     except ProcessingChainError as e:
         log.info("DSP could not be performed")
