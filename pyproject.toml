@@ -32,7 +32,7 @@ classifiers = [
 requires-python = ">=3.9"
 dependencies = [
     "dspeed>=2.0",
-    "fcio>=0.7.9",
+    "fcio>=0.7.9, <0.9",
     "h5py>=3.2.0",
     "hdf5plugin",
     "legend-pydataobj>=1.6",
