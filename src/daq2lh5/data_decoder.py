@@ -5,10 +5,11 @@ Base classes for decoding data into raw LGDO Tables or files
 from __future__ import annotations
 
 import lgdo
+import lh5
 import numpy as np
 from lgdo import LGDO
-from lgdo.lh5 import LH5Store
-from lgdo.lh5 import datatype as dtypeutils
+from lh5 import LH5Store
+from lh5 import datatype as dtypeutils
 
 
 class DataDecoder:
@@ -26,7 +27,7 @@ class DataDecoder:
     of `decoded_values` is typically interpreted as an attribute to be attached
     to the corresponding LGDO. This feature can be for example exploited to
     specify HDF5 dataset settings used by
-    :meth:`~lgdo.lh5.store.LH5Store.write` to write LGDOs to disk.
+    :meth:`~lh5.store.LH5Store.write` to write LGDOs to disk.
 
     For example ::
 
@@ -256,7 +257,7 @@ class DataDecoder:
         n_rows = self.garbage_table.loc
         if n_rows == 0:
             return
-        lgdo.lh5.write(
+        lh5.write(
             self.garbage_table, "garbage", filename, group, n_rows=n_rows, append=True
         )
         self.garbage_table.clear()

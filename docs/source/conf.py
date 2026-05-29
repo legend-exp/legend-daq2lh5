@@ -52,6 +52,7 @@ intersphinx_mapping = {
     "pandas": ("https://pandas.pydata.org/docs", None),
     "h5py": ("https://docs.h5py.org/en/stable", None),
     "lgdo": ("https://legend-pydataobj.readthedocs.io/en/stable", None),
+    "lh5": ("https://legend-lh5io.readthedocs.io/en/stable", None),
     "dspeed": ("https://dspeed.readthedocs.io/en/stable", None),
 }  # add new intersphinx mappings here
 

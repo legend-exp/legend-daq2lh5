@@ -51,14 +51,14 @@ def buffer_processor(rb: RawBuffer, db_dict: dict = None) -> Table:
     ``"compression": {"lgdo": "codec_name" [, ...]}`` `(dict)`
       Updates the `compression` attribute of `lgdo` to `codec_name`. The
       attribute sets the compression algorithm applied by
-      :func:`~lgdo.lh5.store.LH5Store.read` before writing `lgdo` to
+      :func:`~lh5.store.LH5Store.read` before writing `lgdo` to
       disk. Can be used to apply custom waveform compression algorithms from
       :mod:`lgdo.compression`.
 
     ``"hdf5_settings": {"lgdo": { <HDF5 settings> }}`` `(dict)`
       Updates the `hdf5_settings` attribute of `lgdo`. The attribute sets the
       HDF5 dataset options applied by
-      :func:`~lgdo.lh5.store.LH5Store.read` before writing `lgdo` to
+      :func:`~lh5.store.LH5Store.read` before writing `lgdo` to
       disk.
 
     Parameters

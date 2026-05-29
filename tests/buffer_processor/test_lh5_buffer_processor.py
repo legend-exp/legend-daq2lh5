@@ -5,9 +5,9 @@ from pathlib import Path
 
 import h5py
 import lgdo
+import lh5
 import numpy as np
 from dspeed import build_processing_chain as bpc
-from lgdo import lh5
 
 from daq2lh5.buffer_processor.lh5_buffer_processor import lh5_buffer_processor
 from daq2lh5.build_raw import build_raw
