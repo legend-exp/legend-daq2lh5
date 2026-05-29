@@ -5,7 +5,7 @@ import io
 import logging
 import os
 import re
-from typing import Any, Dict
+from typing import Any
 
 import lgdo
 import numpy as np
@@ -15,7 +15,7 @@ from .llama_base import join_fadcid_chid
 
 log = logging.getLogger(__name__)
 
-LLAMA_Channel_Configs_t = Dict[int, Dict[str, Any]]
+LLAMA_Channel_Configs_t = dict[int, dict[str, Any]]
 
 
 def parse_filename_for_timestamp(f_in_name: str) -> float:
