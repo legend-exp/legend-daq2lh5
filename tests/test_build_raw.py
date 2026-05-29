@@ -3,9 +3,9 @@ import os
 from pathlib import Path
 
 import h5py
+import lh5
 import pytest
-from lgdo import lh5
-from lgdo.compression import ULEB128ZigZagDiff
+from lh5.compression import ULEB128ZigZagDiff
 
 from daq2lh5 import build_raw
 from daq2lh5.fc.fc_event_decoder import fc_event_decoded_values
