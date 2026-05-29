@@ -1,15 +1,14 @@
 # Configuration file for the Sphinx documentation builder.
 
 import sys
+from importlib.metadata import version
 from pathlib import Path
-
-from pkg_resources import get_distribution
 
 sys.path.insert(0, Path(__file__).parents[2].resolve().as_posix())
 
 project = "legend-daq2lh5"
 copyright = "2023, the LEGEND Collaboration"
-version = get_distribution("legend-daq2lh5").version
+version = version("legend-daq2lh5")
 
 extensions = [
     "sphinx.ext.githubpages",
