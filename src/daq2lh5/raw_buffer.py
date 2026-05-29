@@ -69,9 +69,8 @@ from __future__ import annotations
 import logging
 import os
 
-import lgdo
 from lgdo import LGDO
-from lgdo.lh5 import LH5Store
+from lh5 import LH5Store
 
 from .buffer_processor.buffer_processor import buffer_processor
 
@@ -440,14 +439,14 @@ def write_to_lh5_and_clear(
         files (saves some time opening / closing files).
     **kwargs
         keyword-arguments forwarded to
-        :meth:`lgdo.lh5.store.LH5Store.write`.
+        :meth:`lh5.store.LH5Store.write`.
 
     See Also
     --------
-    lgdo.lh5.store.LH5Store.write
+    lh5.store.LH5Store.write
     """
     if lh5_store is None:
-        lh5_store = lgdo.LH5Store()
+        lh5_store = LH5Store()
     for rb in raw_buffers:
         if rb.lgdo is None or rb.loc == 0:
             continue  # no data to write

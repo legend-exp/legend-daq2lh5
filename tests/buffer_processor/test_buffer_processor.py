@@ -4,9 +4,9 @@ import sys
 from pathlib import Path
 
 import lgdo
+import lh5
 import numpy as np
 from dspeed import build_processing_chain as bpc
-from lgdo import lh5
 from lgdo.compression import RadwareSigcompress, ULEB128ZigZagDiff
 
 from daq2lh5.build_raw import build_raw

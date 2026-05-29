@@ -3,8 +3,8 @@ import os
 from pathlib import Path
 
 import h5py
+import lh5
 import pytest
-from lgdo import lh5
 from lgdo.compression import ULEB128ZigZagDiff
 
 from daq2lh5 import build_raw

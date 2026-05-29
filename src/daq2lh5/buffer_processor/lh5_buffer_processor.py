@@ -5,7 +5,7 @@ import os
 
 import h5py
 import lgdo
-from lgdo import lh5
+import lh5
 
 from .. import utils
 from ..buffer_processor.buffer_processor import buffer_processor
