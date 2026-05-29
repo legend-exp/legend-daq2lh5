@@ -5,8 +5,8 @@ import logging
 import os
 import time
 
+import lh5
 import numpy as np
-from lgdo import lh5
 from tqdm.auto import tqdm
 
 from . import utils
@@ -81,7 +81,7 @@ def build_raw(
 
     hdf5_settings
         keyword arguments (as a dict) forwarded to
-        :meth:`lgdo.lh5.store.LH5Store.write`.
+        :meth:`lh5.store.LH5Store.write`.
 
     **kwargs
         sent to :class:`.RawBufferLibrary` generation as `kw_dict` argument.
