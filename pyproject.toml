@@ -29,13 +29,14 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Scientific/Engineering",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "dspeed>=2.0",
     "fcio>=0.9.4",
     "h5py>=3.2.0",
     "hdf5plugin",
-    "legend-pydataobj>=1.6",
+    "legend-lh5io",
+    "legend-pydataobj>=2",
     "numpy>=1.21",
     "pyyaml",
     "tqdm>=4.27",

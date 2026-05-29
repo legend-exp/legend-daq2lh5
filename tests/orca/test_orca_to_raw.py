@@ -5,7 +5,7 @@ import struct
 from collections import Counter
 from io import BytesIO
 
-import lgdo.lh5 as lh5
+import lh5
 import numpy as np
 
 from daq2lh5 import build_raw
