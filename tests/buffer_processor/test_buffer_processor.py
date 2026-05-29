@@ -7,7 +7,7 @@ import lgdo
 import lh5
 import numpy as np
 from dspeed import build_processing_chain as bpc
-from lgdo.compression import RadwareSigcompress, ULEB128ZigZagDiff
+from lh5.compression import RadwareSigcompress, ULEB128ZigZagDiff
 
 from daq2lh5.build_raw import build_raw
 from daq2lh5.fc.fc_event_decoder import fc_event_decoded_values
