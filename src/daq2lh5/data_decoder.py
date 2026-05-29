@@ -6,10 +6,10 @@ from __future__ import annotations
 
 import lgdo
 import lh5
+import lh5.io.datatype as dtypeutils
 import numpy as np
 from lgdo import LGDO
 from lh5 import LH5Store
-from lh5 import datatype as dtypeutils
 
 
 class DataDecoder:
@@ -31,7 +31,7 @@ class DataDecoder:
 
     For example ::
 
-      from lgdo.compression import RadwareSigcompress
+      from lh5.compression import RadwareSigcompress
 
       FCEventDecoder.decoded_values = {
         "packet_id": {"dtype": "uint32", "hdf5_settings": {"compression": "gzip"}},
@@ -50,7 +50,7 @@ class DataDecoder:
     will have its `compression` attribute set to
     ``RadwareSigcompress(codec_shift=-32768)``.  Before being written to disk,
     they will be compressed with the HDF5 built-in Gzip filter and with the
-    :class:`~lgdo.compression.radware.RadwareSigcompress` waveform compressor.
+    :class:`~lh5.compression.radware.RadwareSigcompress` waveform compressor.
 
     Examples
     --------

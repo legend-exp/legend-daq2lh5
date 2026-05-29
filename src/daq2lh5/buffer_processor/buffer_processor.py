@@ -9,8 +9,8 @@ import numpy as np
 from dspeed.errors import ProcessingChainError
 from dspeed.processing_chain import build_processing_chain as bpc
 from lgdo import Array, ArrayOfEqualSizedArrays, Table
-from lgdo.compression import WaveformCodec
-from lgdo.compression.utils import str2wfcodec
+from lh5.compression import WaveformCodec
+from lh5.compression.utils import str2wfcodec
 
 if TYPE_CHECKING:
     from ..raw_buffer import RawBuffer
@@ -53,7 +53,7 @@ def buffer_processor(rb: RawBuffer, db_dict: dict = None) -> Table:
       attribute sets the compression algorithm applied by
       :func:`~lh5.store.LH5Store.read` before writing `lgdo` to
       disk. Can be used to apply custom waveform compression algorithms from
-      :mod:`lgdo.compression`.
+      :mod:`lh5.compression`.
 
     ``"hdf5_settings": {"lgdo": { <HDF5 settings> }}`` `(dict)`
       Updates the `hdf5_settings` attribute of `lgdo`. The attribute sets the
