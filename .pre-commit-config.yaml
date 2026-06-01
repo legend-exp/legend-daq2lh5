@@ -25,12 +25,12 @@ repos:
   - id: trailing-whitespace
 
 - repo: https://github.com/asottile/setup-cfg-fmt
-  rev: "v2.8.0"
+  rev: "v3.2.0"
   hooks:
   - id: setup-cfg-fmt
 
 - repo: https://github.com/PyCQA/isort
-  rev: "6.1.0"
+  rev: "8.0.1"
   hooks:
   - id: isort
 
@@ -41,12 +41,12 @@ repos:
     args: ["--py310-plus"]
 
 - repo: https://github.com/psf/black-pre-commit-mirror
-  rev: "25.9.0"
+  rev: "26.3.1"
   hooks:
   - id: black-jupyter
 
 - repo: https://github.com/pre-commit/mirrors-mypy
-  rev: "v1.18.2"
+  rev: "v1.20.0"
   hooks:
     - id: mypy
       files: src
@@ -70,20 +70,20 @@ repos:
     args: ["--extend-ignore", "E203,E501,D10"]
 
 - repo: https://github.com/kynan/nbstripout
-  rev: "0.8.1"
+  rev: "0.9.1"
   hooks:
     - id: nbstripout
       args: ["--drop-empty-cells",
              "--extra-keys", "metadata.kernelspec metadata.language_info"]
 
 - repo: https://github.com/mgedmin/check-manifest
-  rev: "0.50"
+  rev: "0.51"
   hooks:
   - id: check-manifest
     stages: [manual]
 
 - repo: https://github.com/codespell-project/codespell
-  rev: "v2.4.1"
+  rev: "v2.4.2"
   hooks:
   - id: codespell
     additional_dependencies:
