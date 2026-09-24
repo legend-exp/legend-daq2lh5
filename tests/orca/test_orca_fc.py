@@ -1,5 +1,8 @@
+import lh5
+import numpy as np
 import pytest
 
+from daq2lh5 import build_raw
 from daq2lh5.orca import orca_packet
 
 
@@ -38,3 +41,19 @@ def test_orfc_waveform_decoding(orca_stream, fc_packets):
     data_id = orca_packet.get_data_id(wf_packet)
     name = orca_stream.header.get_id_to_decoder_name_dict()[data_id]
     assert name == "ORFlashCamWaveformDecoder"
+
+
+def test_orfc_waveform_dead_defaults(lgnd_test_data, tmptestdir):
+    """Fields absent from ORCA packets get deterministic defaults."""
+    out = f"{tmptestdir}/orca-fc-dead-defaults.lh5"
+    build_raw(
+        lgnd_test_data.get_path("orca/fc/L200-comm-20220519-phy-geds.orca"),
+        out_spec=out,
+        overwrite=True,
+    )
+    tbl = lh5.read("ORFlashCamADCWaveform", out)
+    n_adc = len(np.unique(tbl["channel"].nda))
+    assert (tbl["dr_ch_idx"].nda == 0).all()
+    assert (tbl["dr_ch_len"].nda == n_adc).all()
+    assert (tbl["deadinterval_nsec"].nda == 0).all()
+    assert (tbl["lifetime"].nda == 0).all()

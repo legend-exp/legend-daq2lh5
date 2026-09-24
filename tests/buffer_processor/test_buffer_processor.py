@@ -1013,7 +1013,7 @@ def test_buffer_processor_all_pass(lgnd_test_data, tmptestdir):
 
         if isinstance(raw, lgdo.Struct):
             for obj in raw:
-                assert raw[obj] == raw[obj]
+                assert raw[obj] == proc[obj]
         else:
             assert raw == proc
 
