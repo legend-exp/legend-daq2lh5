@@ -150,7 +150,7 @@ class ORFlashCamListenerConfigDecoder(OrcaDecoder):
             tbl["board_uid"].cumulative_length.nda[ii] = fd0 + n_boards
             for i in range(n_boards):
                 tbl["board_uid"].flattened_data.nda[fd0 + i] = (
-                    packet[13 + n_adc + n_board_rev_words + 2 * i] << 32
+                    int(packet[13 + n_adc + n_board_rev_words + 2 * i]) << 32
                 )
                 tbl["board_uid"].flattened_data.nda[fd0 + i] |= packet[
                     13 + n_adc + n_board_rev_words + 2 * i + 1
