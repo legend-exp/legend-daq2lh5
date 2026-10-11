@@ -191,9 +191,10 @@ class LLAMAEventDecoder(DataDecoder):
         # e sti gran binaries non ce li metti
         # fadc_channel_id = (evt_data_32[0] >> 4) & 0x00000fff  --> to be read earlier,
         # since we need size for chopping out the event from the stream
-        timestamp_in_clock_ticks = ((evt_data_32[0] & 0xFFFF0000) << 16) + evt_data_32[
-            1
-        ]
+        # python ints: uint32 shifts would overflow, and uint64 << int fails on numpy 1.x
+        timestamp_in_clock_ticks = (int(evt_data_32[0] & 0xFFFF0000) << 16) + int(
+            evt_data_32[1]
+        )
         format_bits = (evt_data_32[0]) & 0x0000000F
 
         timestamp = timestamp_in_clock_ticks * self.dt_raw[fadc_channel_id] * 1e-9
