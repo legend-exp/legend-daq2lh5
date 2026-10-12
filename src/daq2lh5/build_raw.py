@@ -4,6 +4,8 @@ import glob
 import logging
 import os
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager, suppress
 
 import lh5
 import numpy as np
@@ -11,12 +13,142 @@ from tqdm.auto import tqdm
 
 from . import utils
 from .compass.compass_streamer import CompassStreamer
+from .data_streamer import DataStreamer
 from .fc.fc_streamer import FCStreamer
 from .llama.llama_streamer import LLAMAStreamer
 from .orca.orca_streamer import OrcaStreamer
-from .raw_buffer import RawBufferLibrary, write_to_lh5_and_clear
+from .raw_buffer import RawBuffer, RawBufferLibrary, write_to_lh5_and_clear
 
 log = logging.getLogger(__name__)
+
+
+def get_streamer(
+    in_stream: str,
+    in_stream_type: str = None,
+    compass_config_file: str = None,
+) -> DataStreamer:
+    """Get the appropriate streamer for an input stream.
+
+    Parameters
+    ----------
+    in_stream
+        the path to the input stream. If `in_stream_type` is ``None``, the
+        stream type is deduced from the file extension (``fcio``, ``orca``,
+        ``bin``/``BIN``) or, lacking one, by testing the content for an ORCA
+        stream.
+    in_stream_type
+        ``'ORCA'``, ``'FlashCam'``, ``'LlamaDaq'``, ``'Compass'``, or ``None``
+        to auto-detect.
+    compass_config_file
+        configuration file for the CoMPASS decoder. If not ``None``,
+        auto-detection selects ``'Compass'``.
+
+    Returns
+    -------
+    streamer
+        a :class:`.DataStreamer` subclass instance appropriate for the
+        input stream, not yet opened.
+
+    Raises
+    ------
+    RuntimeError
+        if `in_stream_type` is ``None`` and auto-detection fails (unknown
+        file extension or content).
+    NotImplementedError
+        if `in_stream_type` is not supported (including ``'MGDO'``, which is
+        recognized but not yet implemented).
+    """
+    if in_stream_type is None:
+        filename = in_stream.split("/")[-1]
+        i_ext = filename.rfind(".")
+        if compass_config_file is not None:
+            in_stream_type = "Compass"
+        elif i_ext != -1:
+            ext = filename[i_ext + 1 :]
+            if ext == "fcio":
+                in_stream_type = "FlashCam"
+            elif ext == "orca":
+                in_stream_type = "ORCA"
+            elif ext == "bin" or ext == "BIN":
+                in_stream_type = "Compass"
+            else:
+                raise RuntimeError(
+                    f"unknown file extension {ext}. Specify in_stream_type"
+                )
+        else:
+            if OrcaStreamer.is_orca_stream(in_stream):
+                in_stream_type = "ORCA"
+            else:
+                raise RuntimeError("unknown file type. Specify in_stream_type")
+
+    if in_stream_type == "ORCA":
+        return OrcaStreamer()
+    elif in_stream_type == "FlashCam":
+        return FCStreamer()
+    elif in_stream_type == "Compass":
+        return CompassStreamer(compass_config_file)
+    elif in_stream_type == "LlamaDaq":
+        return LLAMAStreamer()
+    elif in_stream_type == "MGDO":
+        raise NotImplementedError("MGDO streaming not yet implemented")
+    else:
+        raise NotImplementedError(f"unknown input stream type {in_stream_type}")
+
+
+@contextmanager
+def open_stream(
+    in_stream: str,
+    in_stream_type: str = None,
+    compass_config_file: str = None,
+    **open_kwargs,
+) -> Iterator[tuple[DataStreamer, list[RawBuffer]]]:
+    """Open a DAQ stream of any supported type, guaranteeing closure.
+
+    Composes :func:`.get_streamer` and
+    :meth:`~.data_streamer.DataStreamer.open_stream`: selects the appropriate
+    streamer for `in_stream`, opens it, and yields it together with the
+    header data. The stream is closed on exit from the ``with`` block, also
+    when an exception is raised inside it.
+
+    Examples
+    --------
+    >>> with open_stream("daq.fcio") as (streamer, header_data):
+    ...     for chunk_list in streamer:
+    ...         do_something(chunk_list)
+
+    Parameters
+    ----------
+    in_stream
+        the path to the input stream, see :func:`.get_streamer`.
+    in_stream_type
+        ``'ORCA'``, ``'FlashCam'``, ``'LlamaDaq'``, ``'Compass'``, or ``None``
+        to auto-detect.
+    compass_config_file
+        configuration file for the CoMPASS decoder.
+    open_kwargs
+        keyword arguments forwarded to
+        :meth:`~.data_streamer.DataStreamer.open_stream` (e.g. `rb_lib`,
+        `buffer_size`, `chunk_mode`, `out_stream`).
+
+    Yields
+    ------
+    streamer, header_data
+        the opened :class:`.DataStreamer` and the list of
+        :class:`.RawBuffer`\\ s containing the file header data.
+    """
+    streamer = get_streamer(in_stream, in_stream_type, compass_config_file)
+    try:
+        header_data = streamer.open_stream(in_stream, **open_kwargs)
+    except BaseException:
+        # open_stream may have acquired a resource before failing; release it
+        # best-effort, without letting a cleanup error mask the original one
+        with suppress(Exception):
+            streamer.close_stream()
+        raise
+    try:
+        yield streamer, header_data
+    finally:
+        streamer.close_stream()
 
 
 def build_raw(
@@ -98,29 +230,6 @@ def build_raw(
 
     in_stream_size = os.stat(in_stream).st_size
 
-    # try to guess the input stream type if it's not provided
-    if in_stream_type is None:
-        i_ext = in_stream.split("/")[-1].rfind(".")
-        if compass_config_file is not None:  # skip right away if compass
-            in_stream_type = "Compass"
-        elif i_ext != -1:
-            ext = in_stream.split("/")[-1][i_ext + 1 :]
-            if ext == "fcio":
-                in_stream_type = "FlashCam"
-            elif ext == "orca":
-                in_stream_type = "ORCA"
-            elif ext == "bin" or ext == "BIN":
-                in_stream_type = "Compass"
-            else:
-                raise RuntimeError(
-                    f"unknown file extension {ext}. Specify in_stream_type"
-                )
-        else:
-            if OrcaStreamer.is_orca_stream(in_stream):  # orca default is no ext
-                in_stream_type = "ORCA"
-            else:
-                raise RuntimeError("unknown file type. Specify in_stream_type")
-
     # process out_spec and setup rb_lib if specified
     rb_lib = None
     allowed_exts = [ext for exts in utils.__file_extensions__.values() for ext in exts]
@@ -178,19 +287,7 @@ def build_raw(
     t_start = time.time()
 
     # select the appropriate streamer for in_stream
-    streamer = None
-    if in_stream_type == "ORCA":
-        streamer = OrcaStreamer()
-    elif in_stream_type == "FlashCam":
-        streamer = FCStreamer()
-    elif in_stream_type == "Compass":
-        streamer = CompassStreamer(compass_config_file)
-    elif in_stream_type == "LlamaDaq":
-        streamer = LLAMAStreamer()
-    elif in_stream_type == "MGDO":
-        raise NotImplementedError("MGDO streaming not yet implemented")
-    else:
-        raise NotImplementedError(f"unknown input stream type {in_stream_type}")
+    streamer = get_streamer(in_stream, in_stream_type, compass_config_file)
 
     # initialize the stream and read header. Also initializes rb_lib
     if log.getEffectiveLevel() <= logging.INFO:

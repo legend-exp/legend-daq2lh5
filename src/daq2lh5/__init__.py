@@ -19,6 +19,6 @@ Currently we support the following DAQ data formats:
 """
 
 from ._version import version as __version__
-from .build_raw import build_raw
+from .build_raw import build_raw, get_streamer, open_stream
 
-__all__ = ["build_raw", "__version__"]
+__all__ = ["build_raw", "get_streamer", "open_stream", "__version__"]

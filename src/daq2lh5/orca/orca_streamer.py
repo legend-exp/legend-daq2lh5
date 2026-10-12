@@ -46,6 +46,8 @@ class OrcaStreamer(DataStreamer):
         self.decoder_id_dict = {}  # dict of data_id to decoder object
         self.rbl_id_dict = {}  # dict of RawBufferLists for each data_id
         self.missing_decoders = []
+        self.valid_ids = None  # set of known data ids, None while reading header
+        self.n_resyncs = 0
 
     def load_packet_header(self) -> np.ndarray | None:
         """Loads the packet header at the current read location into the buffer
@@ -61,6 +63,15 @@ class OrcaStreamer(DataStreamer):
             raise RuntimeError(
                 f"got {n_bytes_read} bytes for packet header, expect 4 or 8."
             )
+        if (
+            self.valid_ids is not None
+            and self.packet_id >= 0  # packet 0 is the header
+            and orca_packet.get_data_id(pkt_hdr, shift=False) not in self.valid_ids
+        ):
+            start = self.in_stream.tell() - n_bytes_read
+            if not self._resync(start, pkt_hdr.tobytes()[:n_bytes_read]):
+                return None
+            return self.load_packet_header()
         if orca_packet.is_extended(pkt_hdr) and n_bytes_read < 8:
             raise RuntimeError(
                 f"got {n_bytes_read} bytes for packet header, but require 8 for the extended header format."
@@ -87,6 +98,84 @@ class OrcaStreamer(DataStreamer):
 
         return pkt_hdr
 
+    def _resync(
+        self,
+        start: int,
+        head: bytes,
+        n_chain: int = 3,
+        chunk: int = 2**22,
+        max_words: int = 2**24,
+    ) -> bool:
+        """Skip corrupted data to the next run of `n_chain` valid packets.
+
+        Scans byte-wise from `start` (the bad packet) and leaves the stream at
+        the first valid packet found.
+
+        Parameters
+        ----------
+        start : int
+            file position of the corrupted packet header
+        head : bytes
+            bytes already read from `start` (avoids a backward seek)
+        n_chain : int
+            number of consecutive valid packets required to accept a position
+        chunk : int
+            number of bytes read per scan step
+        max_words : int
+            largest packet length (in words) considered valid
+
+        Returns
+        -------
+        bool
+            False if EOF was reached before a valid position was found
+        """
+        ids = np.array(sorted(i for i in self.valid_ids if not i >> 31), "uint32")
+        buf, base, first = head, start, 1  # skip offset 0, it is the bad packet
+        while True:
+            more = self.in_stream.read(chunk)
+            buf += more
+            cands = []
+            for a in range(4):
+                w = np.frombuffer(buf, "uint32", (len(buf) - a) // 4, a)
+                ok = np.isin(w & 0xFFFC0000, ids) & ((w & 0x3FFFF) > 0)
+                cands.extend(4 * np.nonzero(ok)[0] + a)
+            cands = [int(c) for c in sorted(cands) if c >= first]
+            for off in cands:
+                found = self._check_chain(buf, off, n_chain, max_words)
+                if found is None and more:  # chain runs past buf: read more
+                    break
+                if found:
+                    self.in_stream.seek(base + off)
+                    self.n_resyncs += 1
+                    log.warning(
+                        f"corrupted data after packet {self.packet_id}: "
+                        f"skipped {base + off - start} bytes (file position "
+                        f"{start} to {base + off})"
+                    )
+                    return True
+            else:
+                off = max(len(buf) - 7, first)  # keep a straddling header
+            if not more:
+                log.error(f"corrupted data from file position {start} to EOF")
+                return False
+            first = 0
+            base, buf = base + off, buf[off:]
+
+    def _check_chain(
+        self, buf: bytes, off: int, n_chain: int, max_words: int
+    ) -> bool | None:
+        """Check for `n_chain` valid packets at `off` in `buf`; None if buf ends first."""
+        for _ in range(n_chain):
+            if off + 8 > len(buf):
+                return None
+            pkt_hdr = np.frombuffer(buf, "uint32", 2, off)
+            n_words = int(orca_packet.get_n_words(pkt_hdr))
+            data_id = orca_packet.get_data_id(pkt_hdr, shift=False)
+            if data_id not in self.valid_ids or not 0 < n_words <= max_words:
+                return False
+            off += 4 * n_words
+        return True
+
     def skip_packet(self, n: int = 1) -> bool:
         """Skip a packets without loading it into the internal buffer.
 
@@ -107,7 +196,7 @@ class OrcaStreamer(DataStreamer):
             if pkt_hdr is None:
                 return False
             self.in_stream.seek(
-                (orca_packet.get_n_words(pkt_hdr) - len(pkt_hdr)) * 4, 1
+                (int(orca_packet.get_n_words(pkt_hdr)) - len(pkt_hdr)) * 4, 1
             )
             n -= 1
         return True
@@ -189,7 +278,7 @@ class OrcaStreamer(DataStreamer):
             return pkt_hdr
 
         # long packet: get length and check if we can skip it
-        n_words = orca_packet.get_n_words(pkt_hdr)
+        n_words = int(orca_packet.get_n_words(pkt_hdr))
         if (
             skip_unknown_ids
             and orca_packet.get_data_id(pkt_hdr, shift=False)
@@ -333,6 +422,7 @@ class OrcaStreamer(DataStreamer):
 
         self.set_in_stream(stream_name)
         self.packet_id = -1
+        self.valid_ids = None
 
         # read in the header
         packet = self.load_packet()
@@ -386,6 +476,7 @@ class OrcaStreamer(DataStreamer):
                 decoder = globals()[name]
                 instantiated_decoders[name] = decoder(header=self.header)
             self.decoder_id_dict[data_id] = instantiated_decoders[name]
+        self.valid_ids = {d & 0xFFFFFFFF for d in id_to_dec_name_dict if d != 0}
 
         # initialize the buffers in rb_lib. Store them for fast lookup
         super().open_stream(

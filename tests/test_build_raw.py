@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 from pathlib import Path
 
 import h5py
@@ -7,8 +8,12 @@ import lh5
 import pytest
 from lh5.compression import ULEB128ZigZagDiff
 
-from daq2lh5 import build_raw
+from daq2lh5 import build_raw, get_streamer, open_stream
+from daq2lh5.compass.compass_streamer import CompassStreamer
 from daq2lh5.fc.fc_event_decoder import fc_event_decoded_values
+from daq2lh5.fc.fc_streamer import FCStreamer
+from daq2lh5.llama.llama_streamer import LLAMAStreamer
+from daq2lh5.orca.orca_streamer import OrcaStreamer
 
 config_dir = Path(__file__).parent / "configs"
 
@@ -351,3 +356,105 @@ def test_build_raw_orca_sis3316(lgnd_test_data, tmptestdir):
     )
 
     assert os.path.exists(out_file)
+
+
+@pytest.mark.parametrize(
+    "filename, streamer_class",
+    [
+        ("daq.fcio", FCStreamer),
+        ("daq.orca", OrcaStreamer),
+        ("daq.bin", CompassStreamer),
+        ("daq.BIN", CompassStreamer),
+    ],
+)
+def test_get_streamer_detects_extension(filename, streamer_class):
+    assert isinstance(get_streamer(f"/some/dir/{filename}"), streamer_class)
+
+
+@pytest.mark.parametrize(
+    "in_stream_type, streamer_class",
+    [
+        ("ORCA", OrcaStreamer),
+        ("FlashCam", FCStreamer),
+        ("Compass", CompassStreamer),
+        ("LlamaDaq", LLAMAStreamer),
+    ],
+)
+def test_get_streamer_explicit_type(in_stream_type, streamer_class):
+    assert isinstance(get_streamer("any.name", in_stream_type), streamer_class)
+
+
+def test_get_streamer_compass_config_implies_compass():
+    streamer = get_streamer("extensionless", compass_config_file="cfg.json")
+    assert isinstance(streamer, CompassStreamer)
+
+
+def test_get_streamer_detects_orca_content(lgnd_test_data, tmp_path):
+    orca_file = lgnd_test_data.get_path("orca/fc/L200-comm-20220519-phy-geds.orca")
+    noext = tmp_path / "extensionless_orca"
+    shutil.copyfile(orca_file, noext)
+    assert isinstance(get_streamer(str(noext)), OrcaStreamer)
+
+
+def test_get_streamer_errors(tmp_path):
+    # unknown file extension
+    with pytest.raises(RuntimeError):
+        get_streamer("daq.xyz")
+
+    # no extension and not ORCA content
+    junk = tmp_path / "junkfile"
+    junk.write_bytes(b"\xff" * 64)
+    with pytest.raises(RuntimeError):
+        get_streamer(str(junk))
+
+    # recognized but unimplemented / unknown stream types
+    with pytest.raises(NotImplementedError):
+        get_streamer("daq.fcio", "MGDO")
+    with pytest.raises(NotImplementedError):
+        get_streamer("daq.fcio", "NotADaq")
+
+
+def test_open_stream(lgnd_test_data):
+    in_file = lgnd_test_data.get_path("fcio/L200-comm-20211130-phy-spms.fcio")
+
+    with open_stream(in_file, buffer_size=1024) as (streamer, header_data):
+        assert isinstance(streamer, FCStreamer)
+        assert len(header_data) > 0
+        n_rows = sum(
+            rb.loc
+            for chunk_list in streamer
+            for rb in chunk_list
+            if rb.out_name == "FCEvent"
+        )
+    assert n_rows == 300  # number of events in the test file
+
+
+def test_open_stream_closes_on_error(lgnd_test_data):
+    in_file = lgnd_test_data.get_path("fcio/L200-comm-20211130-phy-spms.fcio")
+
+    closed = []
+    with pytest.raises(ValueError):
+        with open_stream(in_file) as (streamer, _):
+            orig_close = streamer.close_stream
+            streamer.close_stream = lambda: (closed.append(True), orig_close())
+            raise ValueError("oops")
+    assert closed == [True]
+
+
+def test_open_stream_closes_on_open_failure(lgnd_test_data, monkeypatch):
+    in_file = lgnd_test_data.get_path("fcio/L200-comm-20211130-phy-spms.fcio")
+
+    # buffer_size=5 makes open_stream() raise *after* the file is opened, so a
+    # resource is leaked unless the context manager closes it on the way out
+    closed = []
+    orig_close = FCStreamer.close_stream
+    monkeypatch.setattr(
+        FCStreamer,
+        "close_stream",
+        lambda self: (closed.append(True), orig_close(self)),
+    )
+
+    with pytest.raises(ValueError):
+        with open_stream(in_file, buffer_size=5):
+            pass
+    assert closed == [True]  # cleanup attempted despite the failed open

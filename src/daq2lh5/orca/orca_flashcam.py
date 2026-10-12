@@ -692,6 +692,12 @@ class ORFlashCamWaveformDecoder(OrcaDecoder):
             int_packet[offset + 4]
         )
 
+        # not in ORCA packets: use the fcio decoder's defaults / initial values
+        tbl["dr_ch_idx"].nda[ii] = 0
+        tbl["dr_ch_len"].nda[ii] = self.n_adc[fcid]
+        tbl["deadinterval_nsec"].nda[ii] = 0
+        tbl["lifetime"].nda[ii] = 0
+
         # set the event number and clock counters
         offset += 5
         tbl["eventnumber"].nda[ii] = int_packet[offset]

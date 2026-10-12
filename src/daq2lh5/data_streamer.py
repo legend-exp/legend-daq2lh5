@@ -7,6 +7,7 @@ from __future__ import annotations
 import fnmatch
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 
 from .raw_buffer import RawBuffer, RawBufferLibrary, RawBufferList
 
@@ -354,6 +355,26 @@ class DataStreamer(ABC):
         if not still_has_data:
             log.debug(f"decoding complete. flushing {len(list_of_rbs)} buffers")
         return list_of_rbs
+
+    def __iter__(self) -> Iterator[list[RawBuffer]]:
+        """Iterate over chunks of decoded data until the stream is exhausted.
+
+        Wraps :meth:`.read_chunk` and clears the consumed buffers after each
+        yield, as required prior to the next :meth:`.read_chunk` call.
+
+        Notes
+        -----
+        Buffers are reused across iterations: process or copy a yielded
+        chunk's data before advancing the iterator. Only the first
+        ``rb.loc`` rows of each ``rb.lgdo`` contain fresh data.
+        """
+        while True:
+            chunk_list = self.read_chunk()
+            if len(chunk_list) == 0:
+                return
+            yield chunk_list
+            for rb in chunk_list:
+                rb.loc = 0
 
     @abstractmethod
     def get_decoder_list(self) -> list:
