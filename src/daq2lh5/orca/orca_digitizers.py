@@ -146,9 +146,7 @@ class ORSIS3302DecoderForEnergy(OrcaDecoder):
         buffer_wrap = packet[1] & 0x1
         wf_length32 = packet[2]
         ene_wf_length32 = packet[3]
-        tbl["timestamp"].nda[ii] = packet[5] + (
-            (packet[4] & 0xFFFF0000) << 16
-        )  # might need to convert to uint64
+        tbl["timestamp"].nda[ii] = int(packet[5]) + (int(packet[4] & 0xFFFF0000) << 16)
         last_word = packet[-1]
 
         # get the footer
@@ -416,8 +414,8 @@ class ORSIS3316WaveformDecoder(OrcaDecoder):
                 event_start = orca_header_length + num_of_longs * i
 
                 if len(packet) > 10:
-                    tbl["timestamp"].nda[ii] = packet[event_start + 1] + (
-                        (packet[event_start] & 0xFFFF0000) << 16
+                    tbl["timestamp"].nda[ii] = int(packet[event_start + 1]) + (
+                        int(packet[event_start] & 0xFFFF0000) << 16
                     )
                 else:
                     tbl["timestamp"].nda[ii] = 0
